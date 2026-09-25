@@ -5,6 +5,7 @@ namespace Pegasus
 {
     internal sealed class FormConfiguracaoInicial : Form
     {
+        private readonly Button _btnCopiarParaB = new() { Text = "Copiar A → B", Width = 120 };
         private readonly TextBox _txtHostA = new() { Width = 220 , Text = "192.168.1.14" };
         private readonly TextBox _txtPortA = new() { Width = 80, Text = "3306" };
         private readonly TextBox _txtDatabaseA = new() { Width = 220 , Text = "gdrwa" };
@@ -45,6 +46,8 @@ namespace Pegasus
             root.Controls.Add(CriarPainelBanco("Banco A", _txtHostA, _txtPortA, _txtDatabaseA, _txtUserA, _txtPasswordA), 0, 0);
             root.Controls.Add(CriarPainelBanco("Banco B", _txtHostB, _txtPortB, _txtDatabaseB, _txtUserB, _txtPasswordB), 1, 0);
 
+            _btnCopiarParaB.Click += (_, _) => MPrc_CopiarBancoAParaBancoB();
+
             var panelButtons = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.RightToLeft,
@@ -62,6 +65,7 @@ namespace Pegasus
             panelButtons.Controls.Add(btnOk);
             panelButtons.Controls.Add(btnCancel);
             panelButtons.Controls.Add(btnTestar);
+            panelButtons.Controls.Add(_btnCopiarParaB);
 
             root.SetColumnSpan(panelButtons, 2);
             root.Controls.Add(panelButtons, 0, 1);
@@ -69,6 +73,31 @@ namespace Pegasus
             Controls.Add(root);
             AcceptButton = btnOk;
             CancelButton = btnCancel;
+        }
+
+        private void MPrc_CopiarBancoAParaBancoB()
+        {
+            _txtHostB.Text = _txtHostA.Text.Trim();
+            _txtPortB.Text = _txtPortA.Text.Trim();
+            _txtUserB.Text = _txtUserA.Text.Trim();
+            _txtPasswordB.Text = _txtPasswordA.Text;
+            _txtDatabaseB.Text = MFcn_MontarDatabaseBancoB(_txtDatabaseA.Text);
+        }
+
+        private static string MFcn_MontarDatabaseBancoB(string databaseA)
+        {
+            var database = databaseA.Trim();
+            if (string.IsNullOrWhiteSpace(database))
+            {
+                return string.Empty;
+            }
+
+            if (database.EndsWith("a", StringComparison.OrdinalIgnoreCase))
+            {
+                return database[..^1] + "b";
+            }
+
+            return database + "b";
         }
 
         private static GroupBox CriarPainelBanco(string titulo, TextBox txtHost, TextBox txtPort, TextBox txtDb, TextBox txtUser, TextBox txtPass)

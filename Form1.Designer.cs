@@ -76,10 +76,10 @@ namespace Pegasus
             panelFooter = new Panel();
             progressMain = new ProgressBar();
             lblProgress = new Label();
-            lblMensagemOperacao = new Label();
             btnSkipTable = new Button();
             btnRestore = new Button();
             btnBackup = new Button();
+            lblMensagemOperacao = new Label();
             folderBrowserDialog = new FolderBrowserDialog();
             panelHeader.SuspendLayout();
             panelPath.SuspendLayout();
@@ -404,6 +404,7 @@ namespace Pegasus
             dgvModulos.TabIndex = 1;
             dgvModulos.CellValueChanged += dgvModulos_CellValueChanged;
             dgvModulos.CurrentCellDirtyStateChanged += dgvModulos_CurrentCellDirtyStateChanged;
+            dgvModulos.KeyPress += dgvModulos_KeyPress;
             // 
             // colSelModulo
             // 
@@ -480,6 +481,7 @@ namespace Pegasus
             dgvTablesA.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvTablesA.Size = new Size(426, 414);
             dgvTablesA.TabIndex = 1;
+            dgvTablesA.KeyPress += dgvTablesA_KeyPress;
             // 
             // colSelA
             // 
@@ -587,13 +589,13 @@ namespace Pegasus
             panelFooter.Controls.Add(btnBackup);
             panelFooter.Location = new Point(12, 615);
             panelFooter.Name = "panelFooter";
-            panelFooter.Size = new Size(1076, 64);
+            panelFooter.Size = new Size(1076, 55);
             panelFooter.TabIndex = 5;
             // 
             // progressMain
             // 
             progressMain.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            progressMain.Location = new Point(510, 34);
+            progressMain.Location = new Point(510, 29);
             progressMain.Name = "progressMain";
             progressMain.Size = new Size(549, 18);
             progressMain.TabIndex = 3;
@@ -602,23 +604,11 @@ namespace Pegasus
             // 
             lblProgress.AutoSize = true;
             lblProgress.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblProgress.Location = new Point(510, 3);
+            lblProgress.Location = new Point(510, 7);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(130, 15);
             lblProgress.TabIndex = 2;
             lblProgress.Text = "Progresso: 0 de 0 (0%)";
-            // 
-            // lblMensagemOperacao
-            // 
-            lblMensagemOperacao.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            lblMensagemOperacao.AutoEllipsis = true;
-            lblMensagemOperacao.Font = new Font("Segoe UI", 9F);
-            lblMensagemOperacao.ForeColor = Color.FromArgb(55, 65, 81);
-            lblMensagemOperacao.Location = new Point(12, 597);
-            lblMensagemOperacao.Name = "lblMensagemOperacao";
-            lblMensagemOperacao.Size = new Size(486, 15);
-            lblMensagemOperacao.TabIndex = 5;
-            lblMensagemOperacao.Text = "Pronto.";
             // 
             // btnSkipTable
             // 
@@ -627,7 +617,7 @@ namespace Pegasus
             btnSkipTable.FlatStyle = FlatStyle.Flat;
             btnSkipTable.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnSkipTable.ForeColor = Color.White;
-            btnSkipTable.Location = new Point(174, 20);
+            btnSkipTable.Location = new Point(174, 7);
             btnSkipTable.Name = "btnSkipTable";
             btnSkipTable.Size = new Size(158, 40);
             btnSkipTable.TabIndex = 4;
@@ -642,7 +632,7 @@ namespace Pegasus
             btnRestore.FlatStyle = FlatStyle.Flat;
             btnRestore.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnRestore.ForeColor = Color.White;
-            btnRestore.Location = new Point(338, 20);
+            btnRestore.Location = new Point(338, 7);
             btnRestore.Name = "btnRestore";
             btnRestore.Size = new Size(158, 40);
             btnRestore.TabIndex = 1;
@@ -656,13 +646,25 @@ namespace Pegasus
             btnBackup.FlatStyle = FlatStyle.Flat;
             btnBackup.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnBackup.ForeColor = Color.White;
-            btnBackup.Location = new Point(10, 20);
+            btnBackup.Location = new Point(10, 7);
             btnBackup.Name = "btnBackup";
             btnBackup.Size = new Size(158, 40);
             btnBackup.TabIndex = 0;
             btnBackup.Text = "Executar";
             btnBackup.UseVisualStyleBackColor = false;
             btnBackup.Click += btnBackup_Click;
+            // 
+            // lblMensagemOperacao
+            // 
+            lblMensagemOperacao.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblMensagemOperacao.AutoEllipsis = true;
+            lblMensagemOperacao.Font = new Font("Segoe UI", 9F);
+            lblMensagemOperacao.ForeColor = Color.FromArgb(55, 65, 81);
+            lblMensagemOperacao.Location = new Point(12, 597);
+            lblMensagemOperacao.Name = "lblMensagemOperacao";
+            lblMensagemOperacao.Size = new Size(486, 15);
+            lblMensagemOperacao.TabIndex = 5;
+            lblMensagemOperacao.Text = "Pronto.";
             // 
             // Form1
             // 

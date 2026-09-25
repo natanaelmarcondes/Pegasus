@@ -19,6 +19,7 @@ namespace Pegasus
         private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
         private sealed record TableInfo(string Name, long RowCount);
         private sealed record KeyTabelaMetadata(string NomeFs, string NomeLg, string Modulo, string TipoTb);
+        private readonly record struct RestoreExecutionSummary(int Processed, int Errors);
         private readonly record struct PeriodoFiltro(int AnoInicial, int AnoFinal, int AnoMesInicial, int AnoMesFinal, bool Ativo);
 
         private sealed class WMTbl_Tabela
@@ -42,6 +43,10 @@ namespace Pegasus
         private bool _backupEmExecucao;
         private bool _pularTabelaSolicitado;
         private string _chaveTabelaEmProcessamento = string.Empty;
+        private char? _ultimaTeclaModulo;
+        private int _ultimoIndiceModulo = -1;
+        private char? _ultimaTeclaTabela;
+        private int _ultimoIndiceTabela = -1;
         private const int KeyBackupVersao = 3;
         private const int RestoreBatchMaxRows = 500;
 
@@ -86,9 +91,19 @@ namespace Pegasus
             MPrc_EstiloGridModerno(dgvModulos);
             MPrc_EstiloGridModerno(dgvTablesA);
             MPrc_EstiloGridModerno(dgvStatus);
+            MPrc_DefinirPeriodoPadrao();
             lblTablesA.Text = "Tabelas";
             dgvTablesA.SortCompare += dgvTablesA_SortCompare;
             MPrc_AplicarModoOperacao(false);
+        }
+
+        private void MPrc_DefinirPeriodoPadrao()
+        {
+            var periodoFinal = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var periodoInicial = periodoFinal.AddMonths(-2);
+
+            txt_PeriodoInicial.Text = periodoInicial.ToString("MM/yyyy", CultureInfo.InvariantCulture);
+            txt_PeriodoFinal.Text = periodoFinal.ToString("MM/yyyy", CultureInfo.InvariantCulture);
         }
 
         private static void MPrc_EstiloGridModerno(DataGridView grid)
@@ -197,7 +212,30 @@ namespace Pegasus
         {
             var basePath = txtBackupBasePath.Text.Trim();
             var now = DateTime.Now;
-            return Path.Combine(basePath, $"GDRW-{now:yyyyMMdd_HHmmss}");
+            var nomeBaseBanco = MFcn_ObterNomeBaseBancoBackup();
+            return Path.Combine(basePath, $"{nomeBaseBanco}-{now:yyyyMMdd_HHmmss}");
+        }
+
+        private string MFcn_ObterNomeBaseBancoBackup()
+        {
+            var database = _configBancoA?.Database ?? _configBancoB?.Database ?? string.Empty;
+            return MFcn_NormalizarNomeBaseBanco(database);
+        }
+
+        private static string MFcn_NormalizarNomeBaseBanco(string database)
+        {
+            var nome = database.Trim();
+            if (string.IsNullOrWhiteSpace(nome))
+            {
+                return "BACKUP";
+            }
+
+            if (nome.Length > 1 && (nome.EndsWith("a", StringComparison.OrdinalIgnoreCase) || nome.EndsWith("b", StringComparison.OrdinalIgnoreCase)))
+            {
+                nome = nome[..^1];
+            }
+
+            return nome.ToUpperInvariant();
         }
 
         private static string BuildConnectionString(DbTarget target)
@@ -438,6 +476,94 @@ namespace Pegasus
             }
 
             MPrc_AplicarSelecaoAutomaticaPorModulo();
+        }
+
+        private void dgvModulos_KeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (!char.IsLetterOrDigit(e.KeyChar))
+            {
+                return;
+            }
+
+            if (MPrc_NavegarGridPorTecla(dgvModulos, "colModulo", e.KeyChar, ref _ultimaTeclaModulo, ref _ultimoIndiceModulo))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void dgvTablesA_KeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (!char.IsLetterOrDigit(e.KeyChar))
+            {
+                return;
+            }
+
+            if (MPrc_NavegarGridPorTecla(dgvTablesA, "colTabelaA", e.KeyChar, ref _ultimaTeclaTabela, ref _ultimoIndiceTabela))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private static bool MPrc_NavegarGridPorTecla(DataGridView grid, string nomeColuna, char tecla, ref char? ultimaTecla, ref int ultimoIndice)
+        {
+            if (grid.Rows.Count == 0)
+            {
+                ultimaTecla = null;
+                ultimoIndice = -1;
+                return false;
+            }
+
+            var teclaBusca = char.ToUpperInvariant(tecla);
+            var indicesCorrespondentes = new List<int>();
+
+            for (var i = 0; i < grid.Rows.Count; i++)
+            {
+                var row = grid.Rows[i];
+                var texto = Convert.ToString(row.Cells[nomeColuna].Value)?.Trim();
+                if (string.IsNullOrWhiteSpace(texto))
+                {
+                    continue;
+                }
+
+                if (char.ToUpperInvariant(texto[0]) == teclaBusca)
+                {
+                    indicesCorrespondentes.Add(i);
+                }
+            }
+
+            if (indicesCorrespondentes.Count == 0)
+            {
+                ultimaTecla = null;
+                ultimoIndice = -1;
+                return false;
+            }
+
+            int proximoIndice;
+            if (ultimaTecla == teclaBusca)
+            {
+                var posicaoAtual = indicesCorrespondentes.IndexOf(ultimoIndice);
+                proximoIndice = posicaoAtual >= 0 && posicaoAtual < indicesCorrespondentes.Count - 1
+                    ? indicesCorrespondentes[posicaoAtual + 1]
+                    : indicesCorrespondentes[0];
+            }
+            else
+            {
+                proximoIndice = indicesCorrespondentes[0];
+            }
+
+            var cell = grid.Rows[proximoIndice].Cells[nomeColuna];
+            grid.ClearSelection();
+            grid.CurrentCell = cell;
+            grid.Rows[proximoIndice].Selected = true;
+
+            if (proximoIndice >= 0)
+            {
+                grid.FirstDisplayedScrollingRowIndex = proximoIndice;
+            }
+
+            ultimaTecla = teclaBusca;
+            ultimoIndice = proximoIndice;
+            return true;
         }
 
         private static bool MFcn_TabelaAtendeFiltroModulo(WMTbl_Tabela tabela, IReadOnlyCollection<string> modulosSelecionados)
@@ -1123,9 +1249,19 @@ FROM KEY_TABELAS;";
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalArquivos);
 
-                var processed = await RestoreFilesAsync(targetA!, targetB!, selecionadas, 0, totalArquivos);
-                UpdateProgress(processed, totalArquivos);
-                MessageBox.Show("Restore concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var summary = await RestoreFilesAsync(targetA!, targetB!, selecionadas, 0, totalArquivos);
+                UpdateProgress(summary.Processed, totalArquivos);
+
+                if (summary.Errors > 0)
+                {
+                    var mensagem = $"Restore concluído com {summary.Errors} erro(s). Consulte o status das tabelas.";
+                    MessageBox.Show(mensagem, "Restore", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    Log($"Aviso no restore: {summary.Errors} tabela(s) com erro.");
+                }
+                else
+                {
+                    MessageBox.Show("Restore concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex)
             {
@@ -1284,7 +1420,7 @@ ORDER BY TABLE_NAME;";
             var chaveTabela = $"{target.Alias}|{tabela.NomeFisico}";
             _chaveTabelaEmProcessamento = chaveTabela;
             _pularTabelaSolicitado = false;
-            var arquivo = MFcn_MontarNomeArquivoBackup(sequencia, aliasArquivo, tabela.NomeFisico);
+            var arquivo = MFcn_MontarNomeArquivoBackup(sequencia, aliasArquivo, tabela.NomeFisico, MFcn_ObterNomeBaseBancoBackup());
             var caminhoArquivo = Path.Combine(backupDirectory, arquivo);
 
             try
@@ -1460,20 +1596,26 @@ ORDER BY TABLE_NAME;";
             return $"0x{Convert.ToHexString(bytes)}";
         }
 
-        private static string MFcn_MontarNomeArquivoBackup(int sequencia, string aliasBanco, string nomeTabela)
+        private static string MFcn_MontarNomeArquivoBackup(int sequencia, string aliasBanco, string nomeTabela, string nomeBaseBanco)
         {
             var nomeNormalizado = nomeTabela.ToUpperInvariant();
-            return $"{sequencia:D5}_BKP_{aliasBanco}_{nomeNormalizado}.sql";
+            return $"{sequencia:D5}_BKP_{nomeBaseBanco}_{aliasBanco}_{nomeNormalizado}.sql";
         }
 
         private static (string alias, string table)? MFcn_ExtrairBancoETabelaDeArquivoRestore(string filePath)
         {
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            var matchBkp = Regex.Match(fileName, @"^\d+_BKP_([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            var matchBkp = Regex.Match(fileName, @"^\d+_BKP_(?:.+?)_([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (matchBkp.Success)
             {
                 return (matchBkp.Groups[1].Value.ToUpperInvariant(), matchBkp.Groups[2].Value);
+            }
+
+            var matchBkpLegacy = Regex.Match(fileName, @"^\d+_BKP_([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (matchBkpLegacy.Success)
+            {
+                return (matchBkpLegacy.Groups[1].Value.ToUpperInvariant(), matchBkpLegacy.Groups[2].Value);
             }
 
             var matchLegacy = Regex.Match(fileName, @"^([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -1525,6 +1667,84 @@ ORDER BY TABLE_NAME;";
             await command.ExecuteNonQueryAsync();
         }
 
+        private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql)
+        {
+            if (string.IsNullOrWhiteSpace(structureSql))
+            {
+                return;
+            }
+
+            var sqlAtual = structureSql;
+            for (var tentativa = 0; tentativa < 10; tentativa++)
+            {
+                try
+                {
+                    await using var structCommand = new MySqlCommand(sqlAtual, connection);
+                    await structCommand.ExecuteNonQueryAsync();
+                    return;
+                }
+                catch (MySqlException ex)
+                {
+                    if (!MFcn_TentarExtrairColunaComDefaultInvalido(ex.Message, out var nomeColuna))
+                    {
+                        throw;
+                    }
+
+                    var sqlAjustado = MFcn_RemoverDefaultDaColuna(sqlAtual, nomeColuna);
+                    if (string.Equals(sqlAjustado, sqlAtual, StringComparison.Ordinal))
+                    {
+                        throw;
+                    }
+
+                    sqlAtual = sqlAjustado;
+                }
+            }
+
+            await using var finalCommand = new MySqlCommand(sqlAtual, connection);
+            await finalCommand.ExecuteNonQueryAsync();
+        }
+
+        private static bool MFcn_TentarExtrairColunaComDefaultInvalido(string mensagemErro, out string nomeColuna)
+        {
+            nomeColuna = string.Empty;
+            if (string.IsNullOrWhiteSpace(mensagemErro))
+            {
+                return false;
+            }
+
+            var match = Regex.Match(
+                mensagemErro,
+                @"Invalid\s+default\s+value\s+for\s+'([^']+)'",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            nomeColuna = match.Groups[1].Value;
+            return !string.IsNullOrWhiteSpace(nomeColuna);
+        }
+
+        private static string MFcn_RemoverDefaultDaColuna(string structureSql, string nomeColuna)
+        {
+            if (string.IsNullOrWhiteSpace(structureSql) || string.IsNullOrWhiteSpace(nomeColuna))
+            {
+                return structureSql;
+            }
+
+            var pattern = string.Format(
+                CultureInfo.InvariantCulture,
+                @"(^\s*`{0}`\s+.*?)(\s+DEFAULT\s+(?:'[^']*'|[^\s,]+(?:\([^\)]*\))?))(?=(?:\s+ON\s+UPDATE|\s+COMMENT|,|\s*$))",
+                Regex.Escape(nomeColuna));
+
+            return Regex.Replace(
+                structureSql,
+                pattern,
+                "$1",
+                RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
         private static async Task MPrc_RestaurarArquivoKeyBackupAsync(MySqlConnection connection, string filePath)
         {
             var packetLimite = await MFcn_ObterMaxAllowedPacketAsync(connection);
@@ -1558,8 +1778,7 @@ ORDER BY TABLE_NAME;";
                     var structureSql = structureBuilder.ToString().Trim();
                     if (!string.IsNullOrWhiteSpace(structureSql))
                     {
-                        await using var structCommand = new MySqlCommand(structureSql, connection);
-                        await structCommand.ExecuteNonQueryAsync();
+                        await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql);
                     }
 
                     continue;
@@ -1645,12 +1864,13 @@ ORDER BY TABLE_NAME;";
             return Regex.Replace(rowValue, "(^|[,(])0x(?=,|\\))", "$1X''", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private async Task<int> RestoreFilesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, int processed, int total)
+        private async Task<RestoreExecutionSummary> RestoreFilesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, int processed, int total)
         {
             await using var connectionA = new MySqlConnection(BuildConnectionString(targetA));
             await using var connectionB = new MySqlConnection(BuildConnectionString(targetB));
             await connectionA.OpenAsync();
             await connectionB.OpenAsync();
+            var errors = 0;
 
             foreach (var tabela in tabelas.OrderBy(x => x.NomeFisico, StringComparer.OrdinalIgnoreCase))
             {
@@ -1665,10 +1885,13 @@ ORDER BY TABLE_NAME;";
                         processed++;
                         UpdateProgress(processed, total);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosA);
-                        throw;
+                        errors++;
+                        processed++;
+                        UpdateProgress(processed, total);
+                        Log($"Aviso restore {targetA.Alias}.{tabela.NomeFisico}: {ex.Message}");
                     }
                 }
 
@@ -1683,15 +1906,18 @@ ORDER BY TABLE_NAME;";
                         processed++;
                         UpdateProgress(processed, total);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosB);
-                        throw;
+                        errors++;
+                        processed++;
+                        UpdateProgress(processed, total);
+                        Log($"Aviso restore {targetB.Alias}.{tabela.NomeFisico}: {ex.Message}");
                     }
                 }
             }
 
-            return processed;
+            return new RestoreExecutionSummary(processed, errors);
         }
 
         private void txt_PeriodoFinal_TextChanged(object sender, EventArgs e)

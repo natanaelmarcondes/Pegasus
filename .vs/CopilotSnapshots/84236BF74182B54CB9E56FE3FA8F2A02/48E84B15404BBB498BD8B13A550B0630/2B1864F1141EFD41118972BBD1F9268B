@@ -1,0 +1,761 @@
+﻿namespace Pegasus
+{
+    partial class Form1
+    {
+        /// <summary>
+        ///  Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        ///  Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        ///  Required method for Designer support - do not modify
+        ///  the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+            panelHeader = new Panel();
+            lblHeader = new Label();
+            btnLoadTables = new Button();
+            panelPath = new Panel();
+            grpOperacao = new GroupBox();
+            rbOptimize = new RadioButton();
+            rbRestoreOp = new RadioButton();
+            rbBackupOp = new RadioButton();
+            chkIgnorarBackup = new CheckBox();
+            chkIgnorarTemp = new CheckBox();
+            chkIgnorarCep = new CheckBox();
+            chkIgnorarLog = new CheckBox();
+            chkIgnorarVazias = new CheckBox();
+            lblIgnorarTabelas = new Label();
+            txt_PeriodoFinal = new TextBox();
+            lblPeriodoAte = new Label();
+            txt_PeriodoInicial = new TextBox();
+            lblPeriodoInicial = new Label();
+            btnChooseBackupFolder = new Button();
+            txtBackupBasePath = new TextBox();
+            lblBackupBase = new Label();
+            lblPeriodoFinal = new Label();
+            tableMain = new TableLayoutPanel();
+            panelModulos = new Panel();
+            btnUnselectAllModulos = new Button();
+            btnSelectAllModulos = new Button();
+            dgvModulos = new DataGridView();
+            colSelModulo = new DataGridViewCheckBoxColumn();
+            colModulo = new DataGridViewTextBoxColumn();
+            lblModulos = new Label();
+            panelA = new Panel();
+            btnUnselectAllA = new Button();
+            btnSelectAllA = new Button();
+            dgvTablesA = new DataGridView();
+            colSelA = new DataGridViewCheckBoxColumn();
+            colTabelaA = new DataGridViewTextBoxColumn();
+            colQtdA = new DataGridViewTextBoxColumn();
+            lblTablesA = new Label();
+            panelStatus = new Panel();
+            dgvStatus = new DataGridView();
+            colStatusTabela = new DataGridViewTextBoxColumn();
+            colStatusEtapa = new DataGridViewTextBoxColumn();
+            colStatusRegistros = new DataGridViewTextBoxColumn();
+            lblStatus = new Label();
+            panelFooter = new Panel();
+            progressMain = new ProgressBar();
+            lblProgress = new Label();
+            btnSkipTable = new Button();
+            btnRestore = new Button();
+            btnBackup = new Button();
+            lblMensagemOperacao = new Label();
+            folderBrowserDialog = new FolderBrowserDialog();
+            panelHeader.SuspendLayout();
+            panelPath.SuspendLayout();
+            grpOperacao.SuspendLayout();
+            tableMain.SuspendLayout();
+            panelModulos.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvModulos).BeginInit();
+            panelA.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvTablesA).BeginInit();
+            panelStatus.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvStatus).BeginInit();
+            panelFooter.SuspendLayout();
+            SuspendLayout();
+            // 
+            // panelHeader
+            // 
+            panelHeader.BackColor = Color.FromArgb(22, 120, 150);
+            panelHeader.Controls.Add(lblHeader);
+            panelHeader.Dock = DockStyle.Top;
+            panelHeader.Location = new Point(0, 0);
+            panelHeader.Name = "panelHeader";
+            panelHeader.Size = new Size(1100, 40);
+            panelHeader.TabIndex = 0;
+            // 
+            // lblHeader
+            // 
+            lblHeader.AutoSize = true;
+            lblHeader.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblHeader.ForeColor = Color.White;
+            lblHeader.Location = new Point(12, 9);
+            lblHeader.Name = "lblHeader";
+            lblHeader.Size = new Size(205, 21);
+            lblHeader.TabIndex = 0;
+            lblHeader.Text = "Backup/Restore de Dados";
+            // 
+            // btnLoadTables
+            // 
+            btnLoadTables.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnLoadTables.BackColor = Color.FromArgb(35, 144, 178);
+            btnLoadTables.FlatStyle = FlatStyle.Flat;
+            btnLoadTables.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnLoadTables.ForeColor = Color.White;
+            btnLoadTables.Location = new Point(939, 46);
+            btnLoadTables.Name = "btnLoadTables";
+            btnLoadTables.Size = new Size(149, 42);
+            btnLoadTables.TabIndex = 6;
+            btnLoadTables.Text = "Carregar Tabelas";
+            btnLoadTables.UseVisualStyleBackColor = false;
+            btnLoadTables.Click += btnLoadTables_Click;
+            // 
+            // panelPath
+            // 
+            panelPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelPath.BackColor = Color.FromArgb(245, 248, 252);
+            panelPath.BorderStyle = BorderStyle.FixedSingle;
+            panelPath.Controls.Add(grpOperacao);
+            panelPath.Controls.Add(chkIgnorarBackup);
+            panelPath.Controls.Add(chkIgnorarTemp);
+            panelPath.Controls.Add(chkIgnorarCep);
+            panelPath.Controls.Add(chkIgnorarLog);
+            panelPath.Controls.Add(chkIgnorarVazias);
+            panelPath.Controls.Add(lblIgnorarTabelas);
+            panelPath.Controls.Add(txt_PeriodoFinal);
+            panelPath.Controls.Add(lblPeriodoAte);
+            panelPath.Controls.Add(txt_PeriodoInicial);
+            panelPath.Controls.Add(lblPeriodoInicial);
+            panelPath.Controls.Add(btnChooseBackupFolder);
+            panelPath.Controls.Add(txtBackupBasePath);
+            panelPath.Controls.Add(lblBackupBase);
+            panelPath.Location = new Point(15, 46);
+            panelPath.Name = "panelPath";
+            panelPath.Size = new Size(921, 72);
+            panelPath.TabIndex = 3;
+            // 
+            // grpOperacao
+            // 
+            grpOperacao.Controls.Add(rbOptimize);
+            grpOperacao.Controls.Add(rbRestoreOp);
+            grpOperacao.Controls.Add(rbBackupOp);
+            grpOperacao.Location = new Point(5, 0);
+            grpOperacao.Name = "grpOperacao";
+            grpOperacao.Size = new Size(252, 38);
+            grpOperacao.TabIndex = 15;
+            grpOperacao.TabStop = false;
+            grpOperacao.Text = "Operação";
+            // 
+            // rbOptimize
+            // 
+            rbOptimize.AutoSize = true;
+            rbOptimize.Font = new Font("Segoe UI", 9F);
+            rbOptimize.Location = new Point(177, 15);
+            rbOptimize.Name = "rbOptimize";
+            rbOptimize.Size = new Size(70, 19);
+            rbOptimize.TabIndex = 2;
+            rbOptimize.Text = "Otimizar";
+            rbOptimize.UseVisualStyleBackColor = true;
+            rbOptimize.CheckedChanged += rbOperacao_CheckedChanged;
+            // 
+            // rbRestoreOp
+            // 
+            rbRestoreOp.AutoSize = true;
+            rbRestoreOp.Font = new Font("Segoe UI", 9F);
+            rbRestoreOp.Location = new Point(94, 15);
+            rbRestoreOp.Name = "rbRestoreOp";
+            rbRestoreOp.Size = new Size(64, 19);
+            rbRestoreOp.TabIndex = 1;
+            rbRestoreOp.Text = "Restore";
+            rbRestoreOp.UseVisualStyleBackColor = true;
+            rbRestoreOp.CheckedChanged += rbOperacao_CheckedChanged;
+            // 
+            // rbBackupOp
+            // 
+            rbBackupOp.AutoSize = true;
+            rbBackupOp.Checked = true;
+            rbBackupOp.Font = new Font("Segoe UI", 9F);
+            rbBackupOp.Location = new Point(16, 15);
+            rbBackupOp.Name = "rbBackupOp";
+            rbBackupOp.Size = new Size(64, 19);
+            rbBackupOp.TabIndex = 0;
+            rbBackupOp.TabStop = true;
+            rbBackupOp.Text = "Backup";
+            rbBackupOp.UseVisualStyleBackColor = true;
+            rbBackupOp.CheckedChanged += rbOperacao_CheckedChanged;
+            // 
+            // chkIgnorarBackup
+            // 
+            chkIgnorarBackup.AutoSize = true;
+            chkIgnorarBackup.Location = new Point(686, 46);
+            chkIgnorarBackup.Name = "chkIgnorarBackup";
+            chkIgnorarBackup.Size = new Size(65, 19);
+            chkIgnorarBackup.TabIndex = 8;
+            chkIgnorarBackup.Text = "Backup";
+            chkIgnorarBackup.UseVisualStyleBackColor = true;
+            // 
+            // chkIgnorarTemp
+            // 
+            chkIgnorarTemp.AutoSize = true;
+            chkIgnorarTemp.Location = new Point(590, 46);
+            chkIgnorarTemp.Name = "chkIgnorarTemp";
+            chkIgnorarTemp.Size = new Size(90, 19);
+            chkIgnorarTemp.TabIndex = 7;
+            chkIgnorarTemp.Text = "Temporárias";
+            chkIgnorarTemp.UseVisualStyleBackColor = true;
+            // 
+            // chkIgnorarCep
+            // 
+            chkIgnorarCep.AutoSize = true;
+            chkIgnorarCep.Location = new Point(537, 46);
+            chkIgnorarCep.Name = "chkIgnorarCep";
+            chkIgnorarCep.Size = new Size(47, 19);
+            chkIgnorarCep.TabIndex = 6;
+            chkIgnorarCep.Text = "Cep";
+            chkIgnorarCep.UseVisualStyleBackColor = true;
+            // 
+            // chkIgnorarLog
+            // 
+            chkIgnorarLog.AutoSize = true;
+            chkIgnorarLog.Location = new Point(477, 46);
+            chkIgnorarLog.Name = "chkIgnorarLog";
+            chkIgnorarLog.Size = new Size(54, 19);
+            chkIgnorarLog.TabIndex = 5;
+            chkIgnorarLog.Text = "Log's";
+            chkIgnorarLog.UseVisualStyleBackColor = true;
+            // 
+            // chkIgnorarVazias
+            // 
+            chkIgnorarVazias.AutoSize = true;
+            chkIgnorarVazias.Location = new Point(414, 46);
+            chkIgnorarVazias.Name = "chkIgnorarVazias";
+            chkIgnorarVazias.Size = new Size(57, 19);
+            chkIgnorarVazias.TabIndex = 4;
+            chkIgnorarVazias.Text = "Vazias";
+            chkIgnorarVazias.UseVisualStyleBackColor = true;
+            // 
+            // lblIgnorarTabelas
+            // 
+            lblIgnorarTabelas.AutoSize = true;
+            lblIgnorarTabelas.ForeColor = Color.Red;
+            lblIgnorarTabelas.Location = new Point(319, 47);
+            lblIgnorarTabelas.Name = "lblIgnorarTabelas";
+            lblIgnorarTabelas.Size = new Size(89, 15);
+            lblIgnorarTabelas.TabIndex = 14;
+            lblIgnorarTabelas.Text = "Ignorar Tabelas:";
+            // 
+            // txt_PeriodoFinal
+            // 
+            txt_PeriodoFinal.Location = new Point(154, 44);
+            txt_PeriodoFinal.Name = "txt_PeriodoFinal";
+            txt_PeriodoFinal.Size = new Size(62, 23);
+            txt_PeriodoFinal.TabIndex = 8;
+            txt_PeriodoFinal.Text = "09/2026";
+            txt_PeriodoFinal.TextChanged += txt_PeriodoFinal_TextChanged;
+            // 
+            // lblPeriodoAte
+            // 
+            lblPeriodoAte.AutoSize = true;
+            lblPeriodoAte.Location = new Point(135, 51);
+            lblPeriodoAte.Name = "lblPeriodoAte";
+            lblPeriodoAte.Size = new Size(13, 15);
+            lblPeriodoAte.TabIndex = 13;
+            lblPeriodoAte.Text = "a";
+            // 
+            // txt_PeriodoInicial
+            // 
+            txt_PeriodoInicial.Location = new Point(67, 44);
+            txt_PeriodoInicial.Name = "txt_PeriodoInicial";
+            txt_PeriodoInicial.Size = new Size(62, 23);
+            txt_PeriodoInicial.TabIndex = 6;
+            txt_PeriodoInicial.Text = "09/2026";
+            // 
+            // lblPeriodoInicial
+            // 
+            lblPeriodoInicial.AutoSize = true;
+            lblPeriodoInicial.Location = new Point(12, 47);
+            lblPeriodoInicial.Name = "lblPeriodoInicial";
+            lblPeriodoInicial.Size = new Size(51, 15);
+            lblPeriodoInicial.TabIndex = 5;
+            lblPeriodoInicial.Text = "Período:";
+            // 
+            // btnChooseBackupFolder
+            // 
+            btnChooseBackupFolder.Location = new Point(828, 10);
+            btnChooseBackupFolder.Name = "btnChooseBackupFolder";
+            btnChooseBackupFolder.Size = new Size(36, 24);
+            btnChooseBackupFolder.TabIndex = 2;
+            btnChooseBackupFolder.Text = "...";
+            btnChooseBackupFolder.UseVisualStyleBackColor = true;
+            btnChooseBackupFolder.Click += btnChooseBackupFolder_Click;
+            // 
+            // txtBackupBasePath
+            // 
+            txtBackupBasePath.Location = new Point(319, 10);
+            txtBackupBasePath.Name = "txtBackupBasePath";
+            txtBackupBasePath.Size = new Size(502, 23);
+            txtBackupBasePath.TabIndex = 1;
+            txtBackupBasePath.TextChanged += txtBackupBasePath_TextChanged;
+            // 
+            // lblBackupBase
+            // 
+            lblBackupBase.AutoSize = true;
+            lblBackupBase.Location = new Point(263, 13);
+            lblBackupBase.Name = "lblBackupBase";
+            lblBackupBase.Size = new Size(53, 15);
+            lblBackupBase.TabIndex = 0;
+            lblBackupBase.Text = "Diretório";
+            // 
+            // lblPeriodoFinal
+            // 
+            lblPeriodoFinal.Location = new Point(0, 0);
+            lblPeriodoFinal.Name = "lblPeriodoFinal";
+            lblPeriodoFinal.Size = new Size(100, 23);
+            lblPeriodoFinal.TabIndex = 0;
+            // 
+            // tableMain
+            // 
+            tableMain.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tableMain.ColumnCount = 3;
+            tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18F));
+            tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42F));
+            tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+            tableMain.Controls.Add(panelModulos, 0, 0);
+            tableMain.Controls.Add(panelA, 1, 0);
+            tableMain.Controls.Add(panelStatus, 2, 0);
+            tableMain.Location = new Point(12, 123);
+            tableMain.Name = "tableMain";
+            tableMain.RowCount = 1;
+            tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableMain.Size = new Size(1076, 470);
+            tableMain.TabIndex = 4;
+            // 
+            // panelModulos
+            // 
+            panelModulos.BackColor = Color.White;
+            panelModulos.BorderStyle = BorderStyle.FixedSingle;
+            panelModulos.Controls.Add(btnUnselectAllModulos);
+            panelModulos.Controls.Add(btnSelectAllModulos);
+            panelModulos.Controls.Add(dgvModulos);
+            panelModulos.Controls.Add(lblModulos);
+            panelModulos.Dock = DockStyle.Fill;
+            panelModulos.Location = new Point(3, 3);
+            panelModulos.Name = "panelModulos";
+            panelModulos.Size = new Size(187, 464);
+            panelModulos.TabIndex = 0;
+            // 
+            // btnUnselectAllModulos
+            // 
+            btnUnselectAllModulos.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnUnselectAllModulos.Location = new Point(94, 9);
+            btnUnselectAllModulos.Name = "btnUnselectAllModulos";
+            btnUnselectAllModulos.Size = new Size(83, 24);
+            btnUnselectAllModulos.TabIndex = 3;
+            btnUnselectAllModulos.Text = "Desmarcar";
+            btnUnselectAllModulos.UseVisualStyleBackColor = true;
+            btnUnselectAllModulos.Click += btnUnselectAllModulos_Click;
+            // 
+            // btnSelectAllModulos
+            // 
+            btnSelectAllModulos.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSelectAllModulos.Location = new Point(5, 9);
+            btnSelectAllModulos.Name = "btnSelectAllModulos";
+            btnSelectAllModulos.Size = new Size(83, 24);
+            btnSelectAllModulos.TabIndex = 2;
+            btnSelectAllModulos.Text = "Marcar";
+            btnSelectAllModulos.UseVisualStyleBackColor = true;
+            btnSelectAllModulos.Click += btnSelectAllModulos_Click;
+            // 
+            // dgvModulos
+            // 
+            dgvModulos.AllowUserToAddRows = false;
+            dgvModulos.AllowUserToDeleteRows = false;
+            dgvModulos.AllowUserToResizeRows = false;
+            dgvModulos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvModulos.BackgroundColor = Color.White;
+            dgvModulos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvModulos.Columns.AddRange(new DataGridViewColumn[] { colSelModulo, colModulo });
+            dgvModulos.Location = new Point(5, 39);
+            dgvModulos.MultiSelect = false;
+            dgvModulos.Name = "dgvModulos";
+            dgvModulos.RowHeadersVisible = false;
+            dgvModulos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvModulos.Size = new Size(175, 414);
+            dgvModulos.TabIndex = 1;
+            dgvModulos.CellValueChanged += dgvModulos_CellValueChanged;
+            dgvModulos.CurrentCellDirtyStateChanged += dgvModulos_CurrentCellDirtyStateChanged;
+            // 
+            // colSelModulo
+            // 
+            colSelModulo.HeaderText = "";
+            colSelModulo.Name = "colSelModulo";
+            colSelModulo.Width = 30;
+            // 
+            // colModulo
+            // 
+            colModulo.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            colModulo.HeaderText = "Módulo";
+            colModulo.Name = "colModulo";
+            colModulo.ReadOnly = true;
+            // 
+            // lblModulos
+            // 
+            lblModulos.AutoSize = true;
+            lblModulos.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblModulos.Location = new Point(9, 14);
+            lblModulos.Name = "lblModulos";
+            lblModulos.Size = new Size(54, 15);
+            lblModulos.TabIndex = 0;
+            lblModulos.Text = "Módulos";
+            // 
+            // panelA
+            // 
+            panelA.BackColor = Color.White;
+            panelA.BorderStyle = BorderStyle.FixedSingle;
+            panelA.Controls.Add(btnUnselectAllA);
+            panelA.Controls.Add(btnSelectAllA);
+            panelA.Controls.Add(dgvTablesA);
+            panelA.Controls.Add(lblTablesA);
+            panelA.Dock = DockStyle.Fill;
+            panelA.Location = new Point(196, 3);
+            panelA.Name = "panelA";
+            panelA.Size = new Size(445, 464);
+            panelA.TabIndex = 0;
+            // 
+            // btnUnselectAllA
+            // 
+            btnUnselectAllA.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnUnselectAllA.Location = new Point(352, 9);
+            btnUnselectAllA.Name = "btnUnselectAllA";
+            btnUnselectAllA.Size = new Size(83, 24);
+            btnUnselectAllA.TabIndex = 3;
+            btnUnselectAllA.Text = "Desmarcar";
+            btnUnselectAllA.UseVisualStyleBackColor = true;
+            btnUnselectAllA.Click += btnUnselectAllA_Click;
+            // 
+            // btnSelectAllA
+            // 
+            btnSelectAllA.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSelectAllA.Location = new Point(263, 9);
+            btnSelectAllA.Name = "btnSelectAllA";
+            btnSelectAllA.Size = new Size(83, 24);
+            btnSelectAllA.TabIndex = 2;
+            btnSelectAllA.Text = "Marcar";
+            btnSelectAllA.UseVisualStyleBackColor = true;
+            btnSelectAllA.Click += btnSelectAllA_Click;
+            // 
+            // dgvTablesA
+            // 
+            dgvTablesA.AllowUserToAddRows = false;
+            dgvTablesA.AllowUserToDeleteRows = false;
+            dgvTablesA.AllowUserToResizeRows = false;
+            dgvTablesA.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvTablesA.BackgroundColor = Color.White;
+            dgvTablesA.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvTablesA.Columns.AddRange(new DataGridViewColumn[] { colSelA, colTabelaA, colQtdA });
+            dgvTablesA.Location = new Point(9, 39);
+            dgvTablesA.MultiSelect = false;
+            dgvTablesA.Name = "dgvTablesA";
+            dgvTablesA.RowHeadersVisible = false;
+            dgvTablesA.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvTablesA.Size = new Size(426, 414);
+            dgvTablesA.TabIndex = 1;
+            // 
+            // colSelA
+            // 
+            colSelA.HeaderText = "";
+            colSelA.Name = "colSelA";
+            colSelA.Width = 30;
+            // 
+            // colTabelaA
+            // 
+            colTabelaA.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            colTabelaA.HeaderText = "Tabela";
+            colTabelaA.Name = "colTabelaA";
+            colTabelaA.ReadOnly = true;
+            colTabelaA.Width = 265;
+            // 
+            // colQtdA
+            // 
+            colQtdA.HeaderText = "Qtd. Registros";
+            colQtdA.Name = "colQtdA";
+            colQtdA.ReadOnly = true;
+            colQtdA.Width = 110;
+            // 
+            // lblTablesA
+            // 
+            lblTablesA.AutoSize = true;
+            lblTablesA.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblTablesA.Location = new Point(9, 14);
+            lblTablesA.Name = "lblTablesA";
+            lblTablesA.Size = new Size(103, 15);
+            lblTablesA.TabIndex = 0;
+            lblTablesA.Text = "Tabelas - Banco A";
+            // 
+            // panelStatus
+            // 
+            panelStatus.BackColor = Color.White;
+            panelStatus.BorderStyle = BorderStyle.FixedSingle;
+            panelStatus.Controls.Add(dgvStatus);
+            panelStatus.Controls.Add(lblStatus);
+            panelStatus.Dock = DockStyle.Fill;
+            panelStatus.Location = new Point(647, 3);
+            panelStatus.Name = "panelStatus";
+            panelStatus.Size = new Size(426, 464);
+            panelStatus.TabIndex = 2;
+            // 
+            // dgvStatus
+            // 
+            dgvStatus.AllowUserToAddRows = false;
+            dgvStatus.AllowUserToDeleteRows = false;
+            dgvStatus.AllowUserToResizeRows = false;
+            dgvStatus.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvStatus.BackgroundColor = Color.White;
+            dgvStatus.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvStatus.Columns.AddRange(new DataGridViewColumn[] { colStatusTabela, colStatusEtapa, colStatusRegistros });
+            dgvStatus.Location = new Point(10, 39);
+            dgvStatus.MultiSelect = false;
+            dgvStatus.Name = "dgvStatus";
+            dgvStatus.ReadOnly = true;
+            dgvStatus.RowHeadersVisible = false;
+            dgvStatus.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvStatus.Size = new Size(405, 414);
+            dgvStatus.TabIndex = 1;
+            dgvStatus.CellPainting += dgvStatus_CellPainting;
+            // 
+            // colStatusTabela
+            // 
+            colStatusTabela.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            colStatusTabela.HeaderText = "Tabela";
+            colStatusTabela.Name = "colStatusTabela";
+            colStatusTabela.ReadOnly = true;
+            colStatusTabela.Width = 205;
+            // 
+            // colStatusEtapa
+            // 
+            colStatusEtapa.HeaderText = "Status";
+            colStatusEtapa.Name = "colStatusEtapa";
+            colStatusEtapa.ReadOnly = true;
+            colStatusEtapa.Width = 130;
+            // 
+            // colStatusRegistros
+            // 
+            colStatusRegistros.HeaderText = "Qtd.";
+            colStatusRegistros.Name = "colStatusRegistros";
+            colStatusRegistros.ReadOnly = true;
+            colStatusRegistros.Width = 55;
+            // 
+            // lblStatus
+            // 
+            lblStatus.AutoSize = true;
+            lblStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblStatus.Location = new Point(10, 14);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(111, 15);
+            lblStatus.TabIndex = 0;
+            lblStatus.Text = "Status Operacional";
+            // 
+            // panelFooter
+            // 
+            panelFooter.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            panelFooter.BackColor = Color.FromArgb(245, 248, 252);
+            panelFooter.BorderStyle = BorderStyle.FixedSingle;
+            panelFooter.Controls.Add(progressMain);
+            panelFooter.Controls.Add(lblProgress);
+            panelFooter.Controls.Add(btnSkipTable);
+            panelFooter.Controls.Add(btnRestore);
+            panelFooter.Controls.Add(btnBackup);
+            panelFooter.Location = new Point(12, 615);
+            panelFooter.Name = "panelFooter";
+            panelFooter.Size = new Size(1076, 55);
+            panelFooter.TabIndex = 5;
+            // 
+            // progressMain
+            // 
+            progressMain.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            progressMain.Location = new Point(510, 29);
+            progressMain.Name = "progressMain";
+            progressMain.Size = new Size(549, 18);
+            progressMain.TabIndex = 3;
+            // 
+            // lblProgress
+            // 
+            lblProgress.AutoSize = true;
+            lblProgress.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblProgress.Location = new Point(510, 7);
+            lblProgress.Name = "lblProgress";
+            lblProgress.Size = new Size(130, 15);
+            lblProgress.TabIndex = 2;
+            lblProgress.Text = "Progresso: 0 de 0 (0%)";
+            // 
+            // btnSkipTable
+            // 
+            btnSkipTable.BackColor = Color.FromArgb(255, 152, 0);
+            btnSkipTable.Enabled = false;
+            btnSkipTable.FlatStyle = FlatStyle.Flat;
+            btnSkipTable.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnSkipTable.ForeColor = Color.White;
+            btnSkipTable.Location = new Point(174, 7);
+            btnSkipTable.Name = "btnSkipTable";
+            btnSkipTable.Size = new Size(158, 40);
+            btnSkipTable.TabIndex = 4;
+            btnSkipTable.Text = "Pular Tabela";
+            btnSkipTable.UseVisualStyleBackColor = false;
+            btnSkipTable.Click += btnSkipTable_Click;
+            // 
+            // btnRestore
+            // 
+            btnRestore.BackColor = Color.FromArgb(192, 57, 43);
+            btnRestore.Enabled = false;
+            btnRestore.FlatStyle = FlatStyle.Flat;
+            btnRestore.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnRestore.ForeColor = Color.White;
+            btnRestore.Location = new Point(338, 7);
+            btnRestore.Name = "btnRestore";
+            btnRestore.Size = new Size(158, 40);
+            btnRestore.TabIndex = 1;
+            btnRestore.Text = "Cancelar Backup";
+            btnRestore.UseVisualStyleBackColor = false;
+            btnRestore.Click += btnRestore_Click;
+            // 
+            // btnBackup
+            // 
+            btnBackup.BackColor = Color.FromArgb(0, 150, 136);
+            btnBackup.FlatStyle = FlatStyle.Flat;
+            btnBackup.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnBackup.ForeColor = Color.White;
+            btnBackup.Location = new Point(10, 7);
+            btnBackup.Name = "btnBackup";
+            btnBackup.Size = new Size(158, 40);
+            btnBackup.TabIndex = 0;
+            btnBackup.Text = "Executar";
+            btnBackup.UseVisualStyleBackColor = false;
+            btnBackup.Click += btnBackup_Click;
+            // 
+            // lblMensagemOperacao
+            // 
+            lblMensagemOperacao.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblMensagemOperacao.AutoEllipsis = true;
+            lblMensagemOperacao.Font = new Font("Segoe UI", 9F);
+            lblMensagemOperacao.ForeColor = Color.FromArgb(55, 65, 81);
+            lblMensagemOperacao.Location = new Point(12, 597);
+            lblMensagemOperacao.Name = "lblMensagemOperacao";
+            lblMensagemOperacao.Size = new Size(486, 15);
+            lblMensagemOperacao.TabIndex = 5;
+            lblMensagemOperacao.Text = "Pronto.";
+            // 
+            // Form1
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            BackColor = Color.FromArgb(230, 236, 245);
+            ClientSize = new Size(1100, 675);
+            Controls.Add(btnLoadTables);
+            Controls.Add(panelFooter);
+            Controls.Add(lblMensagemOperacao);
+            Controls.Add(tableMain);
+            Controls.Add(panelPath);
+            Controls.Add(panelHeader);
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            MinimumSize = new Size(1116, 714);
+            Name = "Form1";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Kesystems - Backup/Restore";
+            Load += Form1_Load;
+            panelHeader.ResumeLayout(false);
+            panelHeader.PerformLayout();
+            panelPath.ResumeLayout(false);
+            panelPath.PerformLayout();
+            grpOperacao.ResumeLayout(false);
+            grpOperacao.PerformLayout();
+            tableMain.ResumeLayout(false);
+            panelModulos.ResumeLayout(false);
+            panelModulos.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvModulos).EndInit();
+            panelA.ResumeLayout(false);
+            panelA.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvTablesA).EndInit();
+            panelStatus.ResumeLayout(false);
+            panelStatus.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvStatus).EndInit();
+            panelFooter.ResumeLayout(false);
+            panelFooter.PerformLayout();
+            ResumeLayout(false);
+        }
+
+        #endregion
+
+        private Panel panelHeader;
+        private Label lblHeader;
+        private Button btnLoadTables;
+        private Panel panelPath;
+        private GroupBox grpOperacao;
+        private RadioButton rbOptimize;
+        private RadioButton rbRestoreOp;
+        private RadioButton rbBackupOp;
+        private Label lblIgnorarTabelas;
+        private Label lblPeriodoAte;
+        private TextBox txt_PeriodoFinal;
+        private Label lblPeriodoFinal;
+        private TextBox txt_PeriodoInicial;
+        private Label lblPeriodoInicial;
+        private Button btnChooseBackupFolder;
+        private TextBox txtBackupBasePath;
+        private Label lblBackupBase;
+        private TableLayoutPanel tableMain;
+        private Panel panelModulos;
+        private Button btnUnselectAllModulos;
+        private Button btnSelectAllModulos;
+        private DataGridView dgvModulos;
+        private DataGridViewCheckBoxColumn colSelModulo;
+        private DataGridViewTextBoxColumn colModulo;
+        private Label lblModulos;
+        private Panel panelA;
+        private CheckBox chkIgnorarBackup;
+        private CheckBox chkIgnorarTemp;
+        private CheckBox chkIgnorarCep;
+        private CheckBox chkIgnorarLog;
+        private CheckBox chkIgnorarVazias;
+        private Button btnUnselectAllA;
+        private Button btnSelectAllA;
+        private DataGridView dgvTablesA;
+        private Label lblTablesA;
+        private Panel panelStatus;
+        private DataGridView dgvStatus;
+        private Label lblStatus;
+        private Panel panelFooter;
+        private ProgressBar progressMain;
+        private Label lblProgress;
+        private Label lblMensagemOperacao;
+        private Button btnSkipTable;
+        private Button btnRestore;
+        private Button btnBackup;
+        private FolderBrowserDialog folderBrowserDialog;
+        private DataGridViewCheckBoxColumn colSelA;
+        private DataGridViewTextBoxColumn colTabelaA;
+        private DataGridViewTextBoxColumn colQtdA;
+        private DataGridViewTextBoxColumn colStatusTabela;
+        private DataGridViewTextBoxColumn colStatusEtapa;
+        private DataGridViewTextBoxColumn colStatusRegistros;
+    }
+}
