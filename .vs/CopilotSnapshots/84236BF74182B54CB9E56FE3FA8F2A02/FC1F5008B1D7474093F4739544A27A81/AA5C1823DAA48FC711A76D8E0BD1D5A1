@@ -1,0 +1,1163 @@
+﻿using MySqlConnector;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace Pegasus
+{
+    public partial class Form1 : Form
+    {
+        private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
+        private sealed record TableInfo(string Name, long RowCount);
+        private sealed record KeyTabelaMetadata(string NomeFs, string NomeLg, string Modulo, string TipoTb);
+        private readonly record struct PeriodoFiltro(int AnoInicial, int AnoFinal, int AnoMesInicial, int AnoMesFinal, bool Ativo);
+
+        private sealed class WMTbl_Tabela
+        {
+            public required string NomeFisico { get; init; }
+            public bool ExisteA { get; set; }
+            public bool ExisteB { get; set; }
+            public long RegistrosA { get; set; }
+            public long RegistrosB { get; set; }
+            public string ArquivoA { get; set; } = string.Empty;
+            public string ArquivoB { get; set; } = string.Empty;
+            public KeyTabelaMetadata? Metadata { get; set; }
+        }
+
+        private readonly Dictionary<string, KeyTabelaMetadata> _wmMetadataKeyTabelas = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<WMTbl_Tabela> WMTbl_Tabelas = new();
+        private readonly Dictionary<string, int> _wmStatusRowByChave = new(StringComparer.OrdinalIgnoreCase);
+        private BancoConfiguracao? _configBancoA;
+        private BancoConfiguracao? _configBancoB;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            if (!MPrc_AbrirConfiguracaoInicial())
+            {
+                Close();
+                return;
+            }
+
+            MPrc_InicializarTela();
+            txtBackupBasePath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsGDRW");
+            Log("Conexões carregadas da configuração inicial. Clique em Carregar Tabelas.");
+            UpdateProgress(0, 0);
+        }
+
+        private bool MPrc_AbrirConfiguracaoInicial()
+        {
+            using var telaConfig = new FormConfiguracaoInicial();
+            if (telaConfig.ShowDialog(this) != DialogResult.OK)
+            {
+                return false;
+            }
+
+            _configBancoA = telaConfig.ConfigBancoA;
+            _configBancoB = telaConfig.ConfigBancoB;
+            
+            return true;
+        }
+
+        private void MPrc_InicializarTela()
+        {
+            tableMain.ColumnStyles[0].Width = 18F;
+            tableMain.ColumnStyles[1].Width = 47F;
+            tableMain.ColumnStyles[2].Width = 35F;
+            lblTablesA.Text = "Tabelas";
+            dgvTablesA.SortCompare += dgvTablesA_SortCompare;
+        }
+
+        private void Log(string message)
+        {
+            dgvStatus.Rows.Add("Sistema", message, "");
+        }
+
+        private void MPrc_LimparStatusOperacional()
+        {
+            dgvStatus.Rows.Clear();
+            _wmStatusRowByChave.Clear();
+        }
+
+        private void MPrc_ReconstruirMapaStatus()
+        {
+            _wmStatusRowByChave.Clear();
+            for (var i = 0; i < dgvStatus.Rows.Count; i++)
+            {
+                if (dgvStatus.Rows[i].Tag is string chave && !string.IsNullOrWhiteSpace(chave))
+                {
+                    _wmStatusRowByChave[chave] = i;
+                }
+            }
+        }
+
+        private static bool MFcn_StatusEmExecucao(string status)
+        {
+            return status == "Processando" || status == "Restaurando";
+        }
+
+        private string BuildBackupDirectory()
+        {
+            var basePath = txtBackupBasePath.Text.Trim();
+            var now = DateTime.Now;
+            return Path.Combine(basePath, $"GDRW-{now:yyyyMMdd_HHmmss}");
+        }
+
+        private static string BuildConnectionString(DbTarget target)
+        {
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = target.Host,
+                Port = target.Port,
+                Database = target.Database,
+                UserID = target.User,
+                Password = target.Password,
+                ConnectionTimeout = 10,
+                DefaultCommandTimeout = 120,
+                AllowUserVariables = true,
+                ConvertZeroDateTime = true,
+                GuidFormat = MySqlGuidFormat.None,
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private bool TryGetTargets(out DbTarget? targetA, out DbTarget? targetB)
+        {
+            targetA = null;
+            targetB = null;
+
+            if (_configBancoA is not null && _configBancoB is not null)
+            {
+                targetA = new DbTarget("A", _configBancoA.Host, _configBancoA.Port, _configBancoA.Database, _configBancoA.User, _configBancoA.Password);
+                targetB = new DbTarget("B", _configBancoB.Host, _configBancoB.Port, _configBancoB.Database, _configBancoB.User, _configBancoB.Password);
+                return true;
+            }
+
+            MessageBox.Show("Configurações de conexão não carregadas. Reabra o sistema e configure na tela inicial.", "Conexão", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        private void SetBusy(bool busy)
+        {
+            UseWaitCursor = busy;
+            btnLoadTables.Enabled = !busy;
+            btnBackup.Enabled = !busy;
+            btnRestore.Enabled = !busy;
+            btnChooseBackupFolder.Enabled = !busy;
+            btnSelectAllA.Enabled = !busy;
+            btnUnselectAllA.Enabled = !busy;
+        }
+
+        private void btnChooseBackupFolder_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                txtBackupBasePath.Text = folderBrowserDialog.SelectedPath;
+            }
+        }
+
+        private void btnSelectAllA_Click(object sender, EventArgs e) => SetAllRowsByAlias("A", true);
+        private void btnUnselectAllA_Click(object sender, EventArgs e) => SetAllRowsByAlias("A", false);
+        private void btnSelectAllB_Click(object sender, EventArgs e) => SetAllRowsByAlias("B", true);
+        private void btnUnselectAllB_Click(object sender, EventArgs e) => SetAllRowsByAlias("B", false);
+
+        private void SetAllRowsByAlias(string alias, bool selected)
+        {
+            foreach (DataGridViewRow row in dgvTablesA.Rows)
+            {
+                row.Cells["colSelA"].Value = selected;
+            }
+        }
+
+        private List<WMTbl_Tabela> MFcn_ObterTabelasSelecionadas()
+        {
+            var list = new List<WMTbl_Tabela>();
+            foreach (DataGridViewRow row in dgvTablesA.Rows)
+            {
+                if (row.Cells["colSelA"].Value as bool? != true)
+                {
+                    continue;
+                }
+
+                if (row.Tag is not WMTbl_Tabela tabela)
+                {
+                    continue;
+                }
+
+                list.Add(tabela);
+            }
+
+            return list;
+        }
+
+        private static string MFcn_NomeTabelaBase(string nomeTabelaFisica)
+        {
+            if (string.IsNullOrWhiteSpace(nomeTabelaFisica))
+            {
+                return string.Empty;
+            }
+
+            var match = Regex.Match(nomeTabelaFisica, @"^(.*)_([0-9]{4}|[0-9]{6})$", RegexOptions.CultureInvariant);
+            if (!match.Success)
+            {
+                return nomeTabelaFisica;
+            }
+
+            return match.Groups[1].Value;
+        }
+
+        private List<string> MFcn_ObterModulosSelecionados()
+        {
+            var modulos = new List<string>();
+            foreach (DataGridViewRow row in dgvModulos.Rows)
+            {
+                if (row.Cells["colSelModulo"].Value as bool? != true)
+                {
+                    continue;
+                }
+
+                var modulo = Convert.ToString(row.Cells["colModulo"].Value)?.Trim();
+                if (!string.IsNullOrWhiteSpace(modulo))
+                {
+                    var sigla = DLLKEY_SiglaModulo(modulo);
+                    if (!string.IsNullOrWhiteSpace(sigla))
+                    {
+                        modulos.Add(sigla);
+                    }
+                }
+            }
+
+            return modulos.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private void MPrc_PreencherGridModulos(IReadOnlyCollection<WMTbl_Tabela> tabelas)
+        {
+            dgvModulos.Rows.Clear();
+
+            var modulos = tabelas
+                .Where(t => t.Metadata is not null && !string.IsNullOrWhiteSpace(t.Metadata.Modulo))
+                .SelectMany(t => t.Metadata!.Modulo.Split([' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(DLLKEY_SiglaModulo)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(m => m, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var modulo in modulos)
+            {
+                var exibicao = modulo.Equals("ALL", StringComparison.OrdinalIgnoreCase)
+                    ? "GERAL (ALL)"
+                    : modulo;
+                dgvModulos.Rows.Add(false, exibicao);
+            }
+
+            lblModulos.Text = $"Módulos ({modulos.Count})";
+        }
+
+        private void MPrc_AplicarSelecaoAutomaticaPorModulo()
+        {
+            var modulosSelecionados = MFcn_ObterModulosSelecionados();
+
+            foreach (DataGridViewRow row in dgvTablesA.Rows)
+            {
+                if (row.Tag is not WMTbl_Tabela tabela)
+                {
+                    continue;
+                }
+
+                var selecionada = MFcn_TabelaAtendeFiltroModulo(tabela, modulosSelecionados);
+                row.Cells["colSelA"].Value = selecionada;
+            }
+        }
+
+        private void dgvModulos_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
+        {
+            if (dgvModulos.IsCurrentCellDirty)
+            {
+                dgvModulos.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void dgvModulos_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            {
+                return;
+            }
+
+            if (dgvModulos.Columns[e.ColumnIndex].Name != "colSelModulo")
+            {
+                return;
+            }
+
+            MPrc_AplicarSelecaoAutomaticaPorModulo();
+        }
+
+        private static bool MFcn_TabelaAtendeFiltroModulo(WMTbl_Tabela tabela, IReadOnlyCollection<string> modulosSelecionados)
+        {
+            if (modulosSelecionados.Count == 0)
+            {
+                return false;
+            }
+
+            if (tabela.Metadata is null || string.IsNullOrWhiteSpace(tabela.Metadata.Modulo))
+            {
+                return false;
+            }
+
+            var modulosTabela = tabela.Metadata.Modulo
+                .Split([' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(DLLKEY_SiglaModulo)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+
+            return modulosTabela.Any(x => modulosSelecionados.Contains(x, StringComparer.OrdinalIgnoreCase));
+        }
+
+        private static string DLLKEY_SiglaModulo(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+            {
+                return string.Empty;
+            }
+
+            var texto = valor.Trim().ToUpperInvariant();
+
+            var abre = texto.LastIndexOf('(');
+            var fecha = texto.LastIndexOf(')');
+            if (abre >= 0 && fecha > abre)
+            {
+                var interno = texto.Substring(abre + 1, fecha - abre - 1).Trim();
+                if (!string.IsNullOrWhiteSpace(interno))
+                {
+                    return interno;
+                }
+            }
+
+            if (texto == "GERAL")
+            {
+                return "ALL";
+            }
+
+            return texto;
+        }
+
+        private bool MFcn_TentarObterFiltroPeriodo(out PeriodoFiltro filtro)
+        {
+            filtro = new PeriodoFiltro(0, 0, 0, 0, false);
+
+            var periodoInicialTexto = txt_PeriodoInicial.Text.Trim();
+            var periodoFinalTexto = txt_PeriodoFinal.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(periodoInicialTexto) && string.IsNullOrWhiteSpace(periodoFinalTexto))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(periodoInicialTexto) || string.IsNullOrWhiteSpace(periodoFinalTexto))
+            {
+                MessageBox.Show("Informe Período inicial e final no formato MM/YYYY.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!DateTime.TryParseExact(periodoInicialTexto, "MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtInicial)
+                || !DateTime.TryParseExact(periodoFinalTexto, "MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtFinal))
+            {
+                MessageBox.Show("Período inválido. Use MM/YYYY.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (dtInicial > dtFinal)
+            {
+                MessageBox.Show("Período inicial não pode ser maior que o final.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            var anoInicial = dtInicial.Year;
+            var anoFinal = dtFinal.Year;
+            var anoMesInicial = (dtInicial.Year * 100) + dtInicial.Month;
+            var anoMesFinal = (dtFinal.Year * 100) + dtFinal.Month;
+
+            filtro = new PeriodoFiltro(anoInicial, anoFinal, anoMesInicial, anoMesFinal, true);
+            return true;
+        }
+
+        private static bool MFcn_TabelaDentroPeriodo(string nomeTabela, PeriodoFiltro filtro)
+        {
+            if (!filtro.Ativo)
+            {
+                return true;
+            }
+
+            var matchMensal = Regex.Match(nomeTabela, @"_(\d{6})$", RegexOptions.CultureInvariant);
+            if (matchMensal.Success)
+            {
+                var anoMesTexto = matchMensal.Groups[1].Value;
+                if (!int.TryParse(anoMesTexto, NumberStyles.None, CultureInfo.InvariantCulture, out var anoMes))
+                {
+                    return true;
+                }
+
+                var mes = anoMes % 100;
+                if (mes < 1 || mes > 12)
+                {
+                    return true;
+                }
+
+                return anoMes >= filtro.AnoMesInicial && anoMes <= filtro.AnoMesFinal;
+            }
+
+            var matchAnual = Regex.Match(nomeTabela, @"_(\d{4})$", RegexOptions.CultureInvariant);
+            if (matchAnual.Success)
+            {
+                if (!int.TryParse(matchAnual.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var ano))
+                {
+                    return true;
+                }
+
+                return ano >= filtro.AnoInicial && ano <= filtro.AnoFinal;
+            }
+
+            return true;
+        }
+
+        private KeyTabelaMetadata? MFcn_LocalizarMetadataTabela(string nomeTabelaFisica)
+        {
+            if (_wmMetadataKeyTabelas.TryGetValue(nomeTabelaFisica, out var metadataExata))
+            {
+                return metadataExata;
+            }
+
+            var nomeBase = MFcn_NomeTabelaBase(nomeTabelaFisica);
+            if (!nomeBase.Equals(nomeTabelaFisica, StringComparison.OrdinalIgnoreCase)
+                && _wmMetadataKeyTabelas.TryGetValue(nomeBase, out var metadataBase))
+            {
+                return metadataBase;
+            }
+
+            return null;
+        }
+
+        private async Task MPrc_CarregarMetadadosKeyTabelas(DbTarget targetA, DbTarget targetB)
+        {
+            _wmMetadataKeyTabelas.Clear();
+            await MPrc_CarregarMetadadosKeyTabelasPorBanco(targetA);
+            await MPrc_CarregarMetadadosKeyTabelasPorBanco(targetB);
+        }
+
+        private async Task MPrc_CarregarMetadadosKeyTabelasPorBanco(DbTarget target)
+        {
+            const string sql = @"
+SELECT ktb_NomeFs, ktb_NomeLg, ktb_Modulo, ktb_TipoTb
+FROM KEY_TABELAS;";
+
+            try
+            {
+                await using var connection = new MySqlConnection(BuildConnectionString(target));
+                await connection.OpenAsync();
+
+                await using var command = new MySqlCommand(sql, connection);
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var nomeFs = reader.IsDBNull(0) ? string.Empty : reader.GetString(0).Trim();
+                    if (string.IsNullOrWhiteSpace(nomeFs))
+                    {
+                        continue;
+                    }
+
+                    if (_wmMetadataKeyTabelas.ContainsKey(nomeFs))
+                    {
+                        continue;
+                    }
+
+                    var nomeLg = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim();
+                    var modulo = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim();
+                    var tipoTb = reader.IsDBNull(3) ? string.Empty : reader.GetString(3).Trim();
+                    _wmMetadataKeyTabelas[nomeFs] = new KeyTabelaMetadata(nomeFs, nomeLg, modulo, tipoTb);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Aviso KEY_TABELAS ({target.Alias}): {ex.Message}");
+            }
+        }
+
+        private void AddStatus(string alias, string table, string status, long rowCount)
+        {
+            var chave = $"{alias}|{table}";
+            var qtd = MFcn_FormatarQuantidade(rowCount);
+            var emExecucao = MFcn_StatusEmExecucao(status);
+
+            if (_wmStatusRowByChave.TryGetValue(chave, out var rowIndex)
+                && rowIndex >= 0
+                && rowIndex < dgvStatus.Rows.Count)
+            {
+                var row = dgvStatus.Rows[rowIndex];
+                row.Cells[colStatusTabela.Index].Value = table;
+                row.Cells[colStatusEtapa.Index].Value = status;
+                row.Cells[colStatusRegistros.Index].Value = qtd;
+                row.Tag = chave;
+
+                if (emExecucao && rowIndex != 0)
+                {
+                    dgvStatus.Rows.RemoveAt(rowIndex);
+                    dgvStatus.Rows.Insert(0, table, status, qtd);
+                    dgvStatus.Rows[0].Tag = chave;
+                }
+
+                MPrc_ReconstruirMapaStatus();
+                if (dgvStatus.Rows.Count > 0)
+                {
+                    dgvStatus.InvalidateRow(0);
+                }
+                return;
+            }
+
+            if (emExecucao)
+            {
+                dgvStatus.Rows.Insert(0, table, status, qtd);
+                dgvStatus.Rows[0].Tag = chave;
+            }
+            else
+            {
+                var novoIndex = dgvStatus.Rows.Add(table, status, qtd);
+                dgvStatus.Rows[novoIndex].Tag = chave;
+            }
+
+            MPrc_ReconstruirMapaStatus();
+        }
+
+        private static string MFcn_FormatarQuantidade(long valor)
+        {
+            return valor.ToString("N0", CultureInfo.GetCultureInfo("pt-BR"));
+        }
+
+        private static long MFcn_ConverterTextoQuantidade(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                return 0;
+            }
+
+            var normalizado = texto.Trim().Replace(".", string.Empty, StringComparison.Ordinal).Replace(",", string.Empty, StringComparison.Ordinal);
+            return long.TryParse(normalizado, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor)
+                ? valor
+                : 0;
+        }
+
+        private void dgvTablesA_SortCompare(object? sender, DataGridViewSortCompareEventArgs e)
+        {
+            if (e.Column.Name != "colQtdA")
+            {
+                return;
+            }
+
+            var valor1 = MFcn_ConverterTextoQuantidade(Convert.ToString(e.CellValue1));
+            var valor2 = MFcn_ConverterTextoQuantidade(Convert.ToString(e.CellValue2));
+            e.SortResult = valor1.CompareTo(valor2);
+            e.Handled = true;
+        }
+
+        private void UpdateProgress(int processed, int total)
+        {
+            progressMain.Maximum = Math.Max(1, total);
+            progressMain.Value = Math.Min(processed, progressMain.Maximum);
+            var pct = total == 0 ? 0 : (int)Math.Round((double)processed / total * 100, MidpointRounding.AwayFromZero);
+            lblProgress.Text = $"Progresso: {processed} de {total} ({pct}%)";
+        }
+
+        private void dgvStatus_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex != colStatusEtapa.Index)
+            {
+                return;
+            }
+
+            e.PaintBackground(e.CellBounds, true);
+
+            var status = Convert.ToString(dgvStatus.Rows[e.RowIndex].Cells[colStatusEtapa.Index].Value) ?? string.Empty;
+            var color = status switch
+            {
+                "Processando" or "Restaurando" => Color.Orange,
+                "Concluído" => Color.LimeGreen,
+                "Erro" => Color.Red,
+                _ => Color.LightGray,
+            };
+
+            var size = Math.Min(e.CellBounds.Height - 8, 12);
+            var rect = new Rectangle(
+                e.CellBounds.X + 6,
+                e.CellBounds.Y + (e.CellBounds.Height - size) / 2,
+                size,
+                size);
+
+            using var brush = new SolidBrush(color);
+            e.Graphics.FillEllipse(brush, rect);
+            e.Graphics.DrawEllipse(Pens.DimGray, rect);
+
+            var textRect = new Rectangle(
+                rect.Right + 6,
+                e.CellBounds.Y,
+                e.CellBounds.Width - (rect.Width + 12),
+                e.CellBounds.Height);
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                status,
+                e.CellStyle.Font,
+                textRect,
+                e.CellStyle.ForeColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+
+            e.Paint(e.CellBounds, DataGridViewPaintParts.Border);
+            e.Handled = true;
+        }
+
+        private async void btnLoadTables_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            if (!MFcn_TentarObterFiltroPeriodo(out var filtroPeriodo))
+            {
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+                MPrc_LimparStatusOperacional();
+                Log("Carregando tabelas físicas e metadados da KEY_TABELAS...");
+
+                var tabelasLogicas = await MPrc_CarregarTabelasLogicasAsync(targetA!, targetB!);
+                WMTbl_Tabelas.Clear();
+                WMTbl_Tabelas.AddRange(tabelasLogicas);
+
+                var tabelasFiltradas = WMTbl_Tabelas
+                    .Where(x => MFcn_TabelaDentroPeriodo(x.NomeFisico, filtroPeriodo))
+                    .ToList();
+
+                MPrc_PreencherGridModulos(tabelasFiltradas);
+                MPrc_PreencherGridTabelasLogicas(tabelasFiltradas);
+                MPrc_AplicarSelecaoAutomaticaPorModulo();
+                Log($"Tabelas lógicas carregadas: {tabelasFiltradas.Count} (total descobertas: {WMTbl_Tabelas.Count})");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha ao carregar tabelas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async Task<List<WMTbl_Tabela>> MPrc_CarregarTabelasLogicasAsync(DbTarget targetA, DbTarget targetB)
+        {
+            await MPrc_CarregarMetadadosKeyTabelas(targetA, targetB);
+
+            var taskA = LoadTablesAsync(targetA);
+            var taskB = LoadTablesAsync(targetB);
+            await Task.WhenAll(taskA, taskB);
+
+            var mapa = new Dictionary<string, WMTbl_Tabela>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var table in taskA.Result)
+            {
+                if (!mapa.TryGetValue(table.Name, out var tabelaLogica))
+                {
+                    tabelaLogica = new WMTbl_Tabela
+                    {
+                        NomeFisico = table.Name,
+                        Metadata = MFcn_LocalizarMetadataTabela(table.Name),
+                    };
+                    mapa[table.Name] = tabelaLogica;
+                }
+
+                tabelaLogica.ExisteA = true;
+                tabelaLogica.RegistrosA = table.RowCount;
+            }
+
+            foreach (var table in taskB.Result)
+            {
+                if (!mapa.TryGetValue(table.Name, out var tabelaLogica))
+                {
+                    tabelaLogica = new WMTbl_Tabela
+                    {
+                        NomeFisico = table.Name,
+                        Metadata = MFcn_LocalizarMetadataTabela(table.Name),
+                    };
+                    mapa[table.Name] = tabelaLogica;
+                }
+
+                tabelaLogica.ExisteB = true;
+                tabelaLogica.RegistrosB = table.RowCount;
+            }
+
+            return mapa.Values
+                .OrderBy(x => x.NomeFisico, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private void MPrc_PreencherGridTabelasLogicas(IReadOnlyCollection<WMTbl_Tabela> tabelas)
+        {
+            dgvTablesA.Rows.Clear();
+
+            foreach (var tabela in tabelas)
+            {
+                var idx = dgvTablesA.Rows.Add();
+                var row = dgvTablesA.Rows[idx];
+                row.Cells["colSelA"].Value = true;
+                row.Cells["colTabelaA"].Value = tabela.NomeFisico;
+                row.Cells["colQtdA"].Value = MFcn_FormatarQuantidade(tabela.RegistrosA + tabela.RegistrosB);
+                row.Tag = tabela;
+            }
+
+            lblTablesA.Text = "Tabelas";
+        }
+
+        private async void btnBackup_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            var selecionadas = MFcn_ObterTabelasSelecionadas();
+            var totalTables = selecionadas.Sum(x => (x.ExisteA ? 1 : 0) + (x.ExisteB ? 1 : 0));
+
+            if (totalTables == 0)
+            {
+                MessageBox.Show("Selecione ao menos uma tabela para backup.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtBackupBasePath.Text))
+            {
+                MessageBox.Show("Informe a pasta de backup.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+                MPrc_LimparStatusOperacional();
+                UpdateProgress(0, totalTables);
+
+                var backupDirectory = BuildBackupDirectory();
+                Directory.CreateDirectory(backupDirectory);
+
+                var processed = 0;
+                processed = await BackupTablesAsync(targetA!, targetB!, selecionadas, backupDirectory, processed, totalTables);
+
+                UpdateProgress(processed, totalTables);
+                MessageBox.Show("Backup concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha no backup: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro no backup: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async void btnRestore_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            if (folderBrowserDialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var restorePath = folderBrowserDialog.SelectedPath;
+            var sqlFiles = Directory.GetFiles(restorePath, "*.sql", SearchOption.TopDirectoryOnly);
+            if (sqlFiles.Length == 0)
+            {
+                MessageBox.Show("Nenhum arquivo .sql encontrado na pasta selecionada.", "Restore", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var restoreMap = new Dictionary<string, WMTbl_Tabela>(StringComparer.OrdinalIgnoreCase);
+            var ignoredFiles = 0;
+
+            foreach (var file in sqlFiles)
+            {
+                var parsed = MFcn_ExtrairBancoETabelaDeArquivoRestore(file);
+                if (parsed is null)
+                {
+                    ignoredFiles++;
+                    continue;
+                }
+
+                if (!restoreMap.TryGetValue(parsed.Value.table, out var tabela))
+                {
+                    tabela = new WMTbl_Tabela
+                    {
+                        NomeFisico = parsed.Value.table,
+                        Metadata = MFcn_LocalizarMetadataTabela(parsed.Value.table),
+                    };
+                    restoreMap[parsed.Value.table] = tabela;
+                }
+
+                if (parsed.Value.alias == "A")
+                {
+                    tabela.ExisteA = true;
+                    tabela.ArquivoA = file;
+                }
+                else
+                {
+                    tabela.ExisteB = true;
+                    tabela.ArquivoB = file;
+                }
+            }
+
+            var totalFiles = restoreMap.Values.Sum(x => (string.IsNullOrWhiteSpace(x.ArquivoA) ? 0 : 1) + (string.IsNullOrWhiteSpace(x.ArquivoB) ? 0 : 1));
+
+            if (totalFiles == 0)
+            {
+                MessageBox.Show("Nenhum arquivo de backup A/B válido foi encontrado.", "Restore", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+                MPrc_LimparStatusOperacional();
+                UpdateProgress(0, totalFiles);
+
+                var processed = await RestoreFilesAsync(targetA!, targetB!, restoreMap.Values.ToList(), 0, totalFiles);
+
+                if (ignoredFiles > 0)
+                {
+                    Log($"{ignoredFiles} arquivo(s) ignorado(s) sem identificação BKP_A/BKP_B.");
+                }
+
+                UpdateProgress(processed, totalFiles);
+                MessageBox.Show("Restore concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha no restore: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro no restore: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async Task<List<TableInfo>> LoadTablesAsync(DbTarget target)
+        {
+            const string query = @"
+SELECT TABLE_NAME, COALESCE(TABLE_ROWS, 0) AS TABLE_ROWS
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = @db
+  AND TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;";
+
+            var tables = new List<TableInfo>();
+
+            await using var connection = new MySqlConnection(BuildConnectionString(target));
+            await connection.OpenAsync();
+
+            await using var command = new MySqlCommand(query, connection);
+            command.Parameters.AddWithValue("@db", target.Database);
+
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var name = reader.GetString(0);
+                var rows = Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture);
+                tables.Add(new TableInfo(name, rows));
+            }
+
+            return tables;
+        }
+
+        private async Task<int> BackupTablesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, string backupDirectory, int processed, int total)
+        {
+            await using var connectionA = new MySqlConnection(BuildConnectionString(targetA));
+            await using var connectionB = new MySqlConnection(BuildConnectionString(targetB));
+            await connectionA.OpenAsync();
+            await connectionB.OpenAsync();
+
+            var sequencia = 1;
+
+            foreach (var tabela in tabelas)
+            {
+                if (tabela.ExisteA)
+                {
+                    try
+                    {
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Processando", tabela.RegistrosA);
+                        var sqlA = await GetTableBackupSqlAsync(connectionA, tabela.NomeFisico);
+                        var arquivoA = MFcn_MontarNomeArquivoBackup(sequencia, "A", tabela.NomeFisico);
+                        var caminhoA = Path.Combine(backupDirectory, arquivoA);
+                        await File.WriteAllTextAsync(caminhoA, sqlA, Encoding.UTF8);
+                        tabela.ArquivoA = caminhoA;
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosA);
+                        sequencia++;
+                        processed++;
+                        UpdateProgress(processed, total);
+                    }
+                    catch
+                    {
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosA);
+                        throw;
+                    }
+                }
+
+                if (tabela.ExisteB)
+                {
+                    try
+                    {
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Processando", tabela.RegistrosB);
+                        var sqlB = await GetTableBackupSqlAsync(connectionB, tabela.NomeFisico);
+                        var arquivoB = MFcn_MontarNomeArquivoBackup(sequencia, "B", tabela.NomeFisico);
+                        var caminhoB = Path.Combine(backupDirectory, arquivoB);
+                        await File.WriteAllTextAsync(caminhoB, sqlB, Encoding.UTF8);
+                        tabela.ArquivoB = caminhoB;
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosB);
+                        sequencia++;
+                        processed++;
+                        UpdateProgress(processed, total);
+                    }
+                    catch
+                    {
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosB);
+                        throw;
+                    }
+                }
+            }
+
+            return processed;
+        }
+
+        private static string MFcn_MontarNomeArquivoBackup(int sequencia, string aliasBanco, string nomeTabela)
+        {
+            var nomeNormalizado = nomeTabela.ToUpperInvariant();
+            return $"{sequencia:D5}_BKP_{aliasBanco}_{nomeNormalizado}.sql";
+        }
+
+        private static (string alias, string table)? MFcn_ExtrairBancoETabelaDeArquivoRestore(string filePath)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+            var matchBkp = Regex.Match(fileName, @"^\d+_BKP_([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (matchBkp.Success)
+            {
+                return (matchBkp.Groups[1].Value.ToUpperInvariant(), matchBkp.Groups[2].Value);
+            }
+
+            var matchLegacy = Regex.Match(fileName, @"^([AB])_(.+)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (matchLegacy.Success)
+            {
+                return (matchLegacy.Groups[1].Value.ToUpperInvariant(), matchLegacy.Groups[2].Value);
+            }
+
+            return null;
+        }
+
+        private static async Task<string> GetTableBackupSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var createStatement = await GetCreateTableSqlAsync(connection, table);
+            var dataStatements = await GetInsertDataSqlAsync(connection, table);
+
+            var scriptBuilder = new StringBuilder();
+            scriptBuilder.AppendLine("SET FOREIGN_KEY_CHECKS=0;");
+            scriptBuilder.AppendLine($"DROP TABLE IF EXISTS `{escapedTable}`;");
+            scriptBuilder.AppendLine(createStatement + ";");
+            scriptBuilder.AppendLine(dataStatements);
+            scriptBuilder.AppendLine("SET FOREIGN_KEY_CHECKS=1;");
+            return scriptBuilder.ToString();
+        }
+
+        private static async Task<string> GetCreateTableSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var commandText = $"SHOW CREATE TABLE `{escapedTable}`;";
+
+            await using var command = new MySqlCommand(commandText, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                throw new InvalidOperationException($"Não foi possível obter CREATE TABLE para '{table}'.");
+            }
+
+            return reader.GetString(1);
+        }
+
+        private static async Task<string> GetInsertDataSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var sql = $"SELECT * FROM `{escapedTable}`;";
+            var scriptBuilder = new StringBuilder();
+
+            await using var command = new MySqlCommand(sql, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            if (reader.FieldCount == 0)
+            {
+                return string.Empty;
+            }
+
+            var columns = Enumerable.Range(0, reader.FieldCount)
+                .Select(i => $"`{reader.GetName(i).Replace("`", "``", StringComparison.Ordinal)}`")
+                .ToArray();
+
+            var valueRows = new List<string>(200);
+            while (await reader.ReadAsync())
+            {
+                var values = new string[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    values[i] = FormatSqlValue(reader.GetValue(i));
+                }
+
+                valueRows.Add($"({string.Join(",", values)})");
+
+                if (valueRows.Count >= 200)
+                {
+                    AppendInsertBatch(scriptBuilder, escapedTable, columns, valueRows);
+                    valueRows.Clear();
+                }
+            }
+
+            if (valueRows.Count > 0)
+            {
+                AppendInsertBatch(scriptBuilder, escapedTable, columns, valueRows);
+            }
+
+            return scriptBuilder.ToString();
+        }
+
+        private static void AppendInsertBatch(StringBuilder scriptBuilder, string table, string[] columns, List<string> valueRows)
+        {
+            scriptBuilder.Append("INSERT INTO `");
+            scriptBuilder.Append(table);
+            scriptBuilder.Append("` (");
+            scriptBuilder.Append(string.Join(",", columns));
+            scriptBuilder.Append(") VALUES ");
+            scriptBuilder.Append(string.Join(",", valueRows));
+            scriptBuilder.AppendLine(";");
+        }
+
+        private static string FormatSqlValue(object? value)
+        {
+            if (value is null || value == DBNull.Value)
+            {
+                return "NULL";
+            }
+
+            return value switch
+            {
+                string s => $"'{EscapeSqlString(s)}'",
+                char c => $"'{EscapeSqlString(c.ToString())}'",
+                bool b => b ? "1" : "0",
+                byte[] bytes => $"0x{Convert.ToHexString(bytes)}",
+                DateTime dt => $"'{dt:yyyy-MM-dd HH:mm:ss.ffffff}'",
+                DateTimeOffset dto => $"'{dto:yyyy-MM-dd HH:mm:ss.ffffff}'",
+                TimeSpan ts => $"'{ts:c}'",
+                sbyte or byte or short or ushort or int or uint or long or ulong => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+                float or double or decimal => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+                Guid g => $"'{g}'",
+                _ => $"'{EscapeSqlString(Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty)}'",
+            };
+        }
+
+        private static string EscapeSqlString(string value)
+        {
+            return value
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("'", "''", StringComparison.Ordinal);
+        }
+
+        private async Task<int> RestoreFilesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, int processed, int total)
+        {
+            await using var connectionA = new MySqlConnection(BuildConnectionString(targetA));
+            await using var connectionB = new MySqlConnection(BuildConnectionString(targetB));
+            await connectionA.OpenAsync();
+            await connectionB.OpenAsync();
+
+            foreach (var tabela in tabelas.OrderBy(x => x.NomeFisico, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(tabela.ArquivoA))
+                {
+                    try
+                    {
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Restaurando", 0);
+                        var scriptA = await File.ReadAllTextAsync(tabela.ArquivoA, Encoding.UTF8);
+                        if (!string.IsNullOrWhiteSpace(scriptA))
+                        {
+                            await using var commandA = new MySqlCommand(scriptA, connectionA);
+                            await commandA.ExecuteNonQueryAsync();
+                        }
+
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Concluído", 0);
+                        processed++;
+                        UpdateProgress(processed, total);
+                    }
+                    catch
+                    {
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", 0);
+                        throw;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(tabela.ArquivoB))
+                {
+                    try
+                    {
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Restaurando", 0);
+                        var scriptB = await File.ReadAllTextAsync(tabela.ArquivoB, Encoding.UTF8);
+                        if (!string.IsNullOrWhiteSpace(scriptB))
+                        {
+                            await using var commandB = new MySqlCommand(scriptB, connectionB);
+                            await commandB.ExecuteNonQueryAsync();
+                        }
+
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Concluído", 0);
+                        processed++;
+                        UpdateProgress(processed, total);
+                    }
+                    catch
+                    {
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", 0);
+                        throw;
+                    }
+                }
+            }
+
+            return processed;
+        }
+
+        private void txt_PeriodoFinal_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtBackupBasePath_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+    }
+}

@@ -1,0 +1,490 @@
+﻿using MySqlConnector;
+using System.Globalization;
+using System.Text;
+
+namespace Pegasus
+{
+    public partial class Form1 : Form
+    {
+        private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            txtBackupBasePath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsEstrutura");
+            Log("Informe as conexões A/B e clique em 'Carregar tabelas'.");
+        }
+
+        private static string SanitizePathSegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Empresa";
+            }
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var sanitized = new StringBuilder(value.Trim().Length);
+
+            foreach (var ch in value.Trim())
+            {
+                sanitized.Append(invalidChars.Contains(ch) ? '_' : ch);
+            }
+
+            return sanitized.ToString();
+        }
+
+        private void Log(string message)
+        {
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+        }
+
+        private string BuildBackupDirectory()
+        {
+            var basePath = txtBackupBasePath.Text.Trim();
+            var now = DateTime.Now;
+            return Path.Combine(basePath, $"GDRW-{now:yyyyMMdd_HHmmss}");
+        }
+
+        private static string BuildConnectionString(DbTarget target)
+        {
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = target.Host,
+                Port = target.Port,
+                Database = target.Database,
+                UserID = target.User,
+                Password = target.Password,
+                ConnectionTimeout = 10,
+                DefaultCommandTimeout = 120,
+                AllowUserVariables = true,
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private bool TryGetTargets(out DbTarget? targetA, out DbTarget? targetB)
+        {
+            targetA = null;
+            targetB = null;
+
+            var user = txtUser.Text.Trim();
+            var password = txtPassword.Text;
+
+            if (string.IsNullOrWhiteSpace(user))
+            {
+                MessageBox.Show("Informe o usuário.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!TryCreateTarget("A", txtHostA.Text, txtPortA.Text, txtDatabaseA.Text, user, password, out targetA))
+            {
+                return false;
+            }
+
+            if (!TryCreateTarget("B", txtHostB.Text, txtPortB.Text, txtDatabaseB.Text, user, password, out targetB))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryCreateTarget(string alias, string host, string portText, string database, string user, string password, out DbTarget? target)
+        {
+            target = null;
+
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(database))
+            {
+                MessageBox.Show($"Preencha host e database do banco {alias}.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!uint.TryParse(portText.Trim(), out var port))
+            {
+                MessageBox.Show($"Porta inválida para banco {alias}.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            target = new DbTarget(alias, host.Trim(), port, database.Trim(), user, password);
+            return true;
+        }
+
+        private void SetBusy(bool busy)
+        {
+            UseWaitCursor = busy;
+            btnLoadTables.Enabled = !busy;
+            btnBackup.Enabled = !busy;
+            btnRestore.Enabled = !busy;
+            btnChooseBackupFolder.Enabled = !busy;
+        }
+
+        private void btnChooseBackupFolder_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                txtBackupBasePath.Text = folderBrowserDialog.SelectedPath;
+            }
+        }
+
+        private void btnSelectAllA_Click(object sender, EventArgs e) => SetAll(checkedTablesA, true);
+
+        private void btnUnselectAllA_Click(object sender, EventArgs e) => SetAll(checkedTablesA, false);
+
+        private void btnSelectAllB_Click(object sender, EventArgs e) => SetAll(checkedTablesB, true);
+
+        private void btnUnselectAllB_Click(object sender, EventArgs e) => SetAll(checkedTablesB, false);
+
+        private static void SetAll(CheckedListBox listBox, bool isChecked)
+        {
+            for (var i = 0; i < listBox.Items.Count; i++)
+            {
+                listBox.SetItemChecked(i, isChecked);
+            }
+        }
+
+        private async void btnLoadTables_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+                Log("Carregando tabelas dos bancos A e B...");
+
+                var taskA = LoadTablesAsync(targetA!);
+                var taskB = LoadTablesAsync(targetB!);
+                await Task.WhenAll(taskA, taskB);
+
+                checkedTablesA.Items.Clear();
+                checkedTablesB.Items.Clear();
+
+                foreach (var tableName in taskA.Result)
+                {
+                    checkedTablesA.Items.Add(tableName, true);
+                }
+
+                foreach (var tableName in taskB.Result)
+                {
+                    checkedTablesB.Items.Add(tableName, true);
+                }
+
+                Log($"Tabelas carregadas. A: {taskA.Result.Count}, B: {taskB.Result.Count}.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha ao carregar tabelas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro ao carregar tabelas: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async void btnBackup_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            var selectedA = GetCheckedTables(checkedTablesA);
+            var selectedB = GetCheckedTables(checkedTablesB);
+
+            if (selectedA.Count == 0 && selectedB.Count == 0)
+            {
+                MessageBox.Show("Selecione ao menos uma tabela para backup.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtBackupBasePath.Text))
+            {
+                MessageBox.Show("Informe a pasta de backup.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+
+                var backupDirectory = BuildBackupDirectory();
+                Directory.CreateDirectory(backupDirectory);
+                Log($"Gerando backup em: {backupDirectory}");
+
+                if (selectedA.Count > 0)
+                {
+                    await BackupTablesAsync(targetA!, selectedA, backupDirectory);
+                }
+
+                if (selectedB.Count > 0)
+                {
+                    await BackupTablesAsync(targetB!, selectedB, backupDirectory);
+                }
+
+                Log("Backup concluído com sucesso.");
+                MessageBox.Show("Backup concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha no backup: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro no backup: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async void btnRestore_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            if (folderBrowserDialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var restorePath = folderBrowserDialog.SelectedPath;
+            var sqlFiles = Directory.GetFiles(restorePath, "*.sql", SearchOption.TopDirectoryOnly);
+            if (sqlFiles.Length == 0)
+            {
+                MessageBox.Show("Nenhum arquivo .sql encontrado na pasta selecionada.", "Restore", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var filesA = sqlFiles.Where(x => Path.GetFileName(x).StartsWith("A_", StringComparison.OrdinalIgnoreCase)).ToList();
+            var filesB = sqlFiles.Where(x => Path.GetFileName(x).StartsWith("B_", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            try
+            {
+                SetBusy(true);
+                Log($"Iniciando restore da pasta: {restorePath}");
+
+                if (filesA.Count > 0)
+                {
+                    await RestoreFilesAsync(targetA!, filesA);
+                }
+
+                if (filesB.Count > 0)
+                {
+                    await RestoreFilesAsync(targetB!, filesB);
+                }
+
+                var ignoredCount = sqlFiles.Length - filesA.Count - filesB.Count;
+                if (ignoredCount > 0)
+                {
+                    Log($"{ignoredCount} arquivo(s) ignorado(s) por não iniciar com prefixo A_ ou B_.");
+                }
+
+                Log("Restore concluído com sucesso.");
+                MessageBox.Show("Restore concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha no restore: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro no restore: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async Task<List<string>> LoadTablesAsync(DbTarget target)
+        {
+            var query = @"
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = @db
+  AND TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;";
+
+            var tableNames = new List<string>();
+
+            await using var connection = new MySqlConnection(BuildConnectionString(target));
+            await connection.OpenAsync();
+
+            await using var command = new MySqlCommand(query, connection);
+            command.Parameters.AddWithValue("@db", target.Database);
+
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                tableNames.Add(reader.GetString(0));
+            }
+
+            return tableNames;
+        }
+
+        private static List<string> GetCheckedTables(CheckedListBox listBox)
+        {
+            return listBox.CheckedItems.Cast<object>()
+                .Select(x => x.ToString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Cast<string>()
+                .ToList();
+        }
+
+        private async Task BackupTablesAsync(DbTarget target, IReadOnlyCollection<string> tables, string backupDirectory)
+        {
+            await using var connection = new MySqlConnection(BuildConnectionString(target));
+            await connection.OpenAsync();
+
+            foreach (var table in tables)
+            {
+                var createAndDataSql = await GetTableBackupSqlAsync(connection, table);
+                var fileName = $"{target.Alias}_{table}.sql";
+                var filePath = Path.Combine(backupDirectory, fileName);
+                await File.WriteAllTextAsync(filePath, createAndDataSql, Encoding.UTF8);
+                Log($"Backup: {fileName}");
+            }
+        }
+
+        private static async Task<string> GetTableBackupSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var createStatement = await GetCreateTableSqlAsync(connection, table);
+            var dataStatements = await GetInsertDataSqlAsync(connection, table);
+
+            var scriptBuilder = new StringBuilder();
+            scriptBuilder.AppendLine("SET FOREIGN_KEY_CHECKS=0;");
+            scriptBuilder.AppendLine($"DROP TABLE IF EXISTS `{escapedTable}`;");
+            scriptBuilder.AppendLine(createStatement + ";");
+            scriptBuilder.AppendLine(dataStatements);
+            scriptBuilder.AppendLine("SET FOREIGN_KEY_CHECKS=1;");
+            return scriptBuilder.ToString();
+        }
+
+        private static async Task<string> GetCreateTableSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var commandText = $"SHOW CREATE TABLE `{escapedTable}`;";
+
+            await using var command = new MySqlCommand(commandText, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                throw new InvalidOperationException($"Não foi possível obter CREATE TABLE para '{table}'.");
+            }
+
+            var createStatement = reader.GetString(1);
+            return createStatement;
+        }
+
+        private static async Task<string> GetInsertDataSqlAsync(MySqlConnection connection, string table)
+        {
+            var escapedTable = table.Replace("`", "``", StringComparison.Ordinal);
+            var sql = $"SELECT * FROM `{escapedTable}`;";
+            var scriptBuilder = new StringBuilder();
+
+            await using var command = new MySqlCommand(sql, connection);
+            await using var reader = await command.ExecuteReaderAsync();
+
+            if (reader.FieldCount == 0)
+            {
+                return string.Empty;
+            }
+
+            var columns = Enumerable.Range(0, reader.FieldCount)
+                .Select(i => $"`{reader.GetName(i).Replace("`", "``", StringComparison.Ordinal)}`")
+                .ToArray();
+
+            var valueRows = new List<string>(200);
+            while (await reader.ReadAsync())
+            {
+                var values = new string[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    values[i] = FormatSqlValue(reader.GetValue(i));
+                }
+
+                valueRows.Add($"({string.Join(",", values)})");
+
+                if (valueRows.Count >= 200)
+                {
+                    AppendInsertBatch(scriptBuilder, escapedTable, columns, valueRows);
+                    valueRows.Clear();
+                }
+            }
+
+            if (valueRows.Count > 0)
+            {
+                AppendInsertBatch(scriptBuilder, escapedTable, columns, valueRows);
+            }
+
+            return scriptBuilder.ToString();
+        }
+
+        private static void AppendInsertBatch(StringBuilder scriptBuilder, string table, string[] columns, List<string> valueRows)
+        {
+            scriptBuilder.Append("INSERT INTO `");
+            scriptBuilder.Append(table);
+            scriptBuilder.Append("` (");
+            scriptBuilder.Append(string.Join(",", columns));
+            scriptBuilder.Append(") VALUES ");
+            scriptBuilder.Append(string.Join(",", valueRows));
+            scriptBuilder.AppendLine(";");
+        }
+
+        private static string FormatSqlValue(object? value)
+        {
+            if (value is null || value == DBNull.Value)
+            {
+                return "NULL";
+            }
+
+            return value switch
+            {
+                string s => $"'{EscapeSqlString(s)}'",
+                char c => $"'{EscapeSqlString(c.ToString())}'",
+                bool b => b ? "1" : "0",
+                byte[] bytes => $"0x{Convert.ToHexString(bytes)}",
+                DateTime dt => $"'{dt:yyyy-MM-dd HH:mm:ss.ffffff}'",
+                DateTimeOffset dto => $"'{dto:yyyy-MM-dd HH:mm:ss.ffffff}'",
+                TimeSpan ts => $"'{ts:c}'",
+                sbyte or byte or short or ushort or int or uint or long or ulong => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+                float or double or decimal => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+                Guid g => $"'{g}'",
+                _ => $"'{EscapeSqlString(Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty)}'",
+            };
+        }
+
+        private static string EscapeSqlString(string value)
+        {
+            return value
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("'", "''", StringComparison.Ordinal);
+        }
+
+        private async Task RestoreFilesAsync(DbTarget target, IReadOnlyCollection<string> sqlFiles)
+        {
+            await using var connection = new MySqlConnection(BuildConnectionString(target));
+            await connection.OpenAsync();
+
+            foreach (var file in sqlFiles.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+            {
+                var script = await File.ReadAllTextAsync(file, Encoding.UTF8);
+                if (string.IsNullOrWhiteSpace(script))
+                {
+                    continue;
+                }
+
+                await using var command = new MySqlCommand(script, connection);
+                await command.ExecuteNonQueryAsync();
+                Log($"Restore {target.Alias}: {Path.GetFileName(file)}");
+            }
+        }
+    }
+}

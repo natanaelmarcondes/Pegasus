@@ -1,0 +1,226 @@
+﻿using MySqlConnector;
+using System.Text;
+
+namespace Pegasus
+{
+    public partial class Form1 : Form
+    {
+        private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            txtBackupBasePath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsEstrutura");
+            Log("Informe as conexões A/B e clique em 'Carregar tabelas'.");
+        }
+
+        private static string SanitizePathSegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Empresa";
+            }
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var sanitized = new StringBuilder(value.Trim().Length);
+
+            foreach (var ch in value.Trim())
+            {
+                sanitized.Append(invalidChars.Contains(ch) ? '_' : ch);
+            }
+
+            return sanitized.ToString();
+        }
+
+        private void Log(string message)
+        {
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+        }
+
+        private string BuildBackupDirectory()
+        {
+            var basePath = txtBackupBasePath.Text.Trim();
+            var empresa = SanitizePathSegment(txtEmpresa.Text);
+            var now = DateTime.Now;
+            return Path.Combine(basePath, now.Year.ToString("0000"), now.Month.ToString("00"), now.Day.ToString("00"), empresa);
+        }
+
+        private static string BuildConnectionString(DbTarget target)
+        {
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = target.Host,
+                Port = target.Port,
+                Database = target.Database,
+                UserID = target.User,
+                Password = target.Password,
+                ConnectionTimeout = 10,
+                DefaultCommandTimeout = 120,
+                AllowUserVariables = true,
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private bool TryGetTargets(out DbTarget? targetA, out DbTarget? targetB)
+        {
+            targetA = null;
+            targetB = null;
+
+            var user = txtUser.Text.Trim();
+            var password = txtPassword.Text;
+
+            if (string.IsNullOrWhiteSpace(user))
+            {
+                MessageBox.Show("Informe o usuário.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!TryCreateTarget("A", txtHostA.Text, txtPortA.Text, txtDatabaseA.Text, user, password, out targetA))
+            {
+                return false;
+            }
+
+            if (!TryCreateTarget("B", txtHostB.Text, txtPortB.Text, txtDatabaseB.Text, user, password, out targetB))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryCreateTarget(string alias, string host, string portText, string database, string user, string password, out DbTarget? target)
+        {
+            target = null;
+
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(database))
+            {
+                MessageBox.Show($"Preencha host e database do banco {alias}.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!uint.TryParse(portText.Trim(), out var port))
+            {
+                MessageBox.Show($"Porta inválida para banco {alias}.", "Validação", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            target = new DbTarget(alias, host.Trim(), port, database.Trim(), user, password);
+            return true;
+        }
+
+        private void SetBusy(bool busy)
+        {
+            UseWaitCursor = busy;
+            btnLoadTables.Enabled = !busy;
+            btnBackup.Enabled = !busy;
+            btnRestore.Enabled = !busy;
+            btnChooseBackupFolder.Enabled = !busy;
+        }
+
+        private void btnChooseBackupFolder_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                txtBackupBasePath.Text = folderBrowserDialog.SelectedPath;
+            }
+        }
+
+        private void btnSelectAllA_Click(object sender, EventArgs e) => SetAll(checkedTablesA, true);
+
+        private void btnUnselectAllA_Click(object sender, EventArgs e) => SetAll(checkedTablesA, false);
+
+        private void btnSelectAllB_Click(object sender, EventArgs e) => SetAll(checkedTablesB, true);
+
+        private void btnUnselectAllB_Click(object sender, EventArgs e) => SetAll(checkedTablesB, false);
+
+        private static void SetAll(CheckedListBox listBox, bool isChecked)
+        {
+            for (var i = 0; i < listBox.Items.Count; i++)
+            {
+                listBox.SetItemChecked(i, isChecked);
+            }
+        }
+
+        private async void btnLoadTables_Click(object sender, EventArgs e)
+        {
+            if (!TryGetTargets(out var targetA, out var targetB))
+            {
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+                Log("Carregando tabelas dos bancos A e B...");
+
+                var taskA = LoadTablesAsync(targetA!);
+                var taskB = LoadTablesAsync(targetB!);
+                await Task.WhenAll(taskA, taskB);
+
+                checkedTablesA.Items.Clear();
+                checkedTablesB.Items.Clear();
+
+                foreach (var tableName in taskA.Result)
+                {
+                    checkedTablesA.Items.Add(tableName, true);
+                }
+
+                foreach (var tableName in taskB.Result)
+                {
+                    checkedTablesB.Items.Add(tableName, true);
+                }
+
+                Log($"Tabelas carregadas. A: {taskA.Result.Count}, B: {taskB.Result.Count}.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha ao carregar tabelas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"Erro ao carregar tabelas: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private async void btnBackup_Click(object sender, EventArgs e)
+        {
+        }
+
+        private async void btnRestore_Click(object sender, EventArgs e)
+        {
+        }
+
+        private async Task<List<string>> LoadTablesAsync(DbTarget target)
+        {
+            var query = @"
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = @db
+  AND TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;";
+
+            var tableNames = new List<string>();
+
+            await using var connection = new MySqlConnection(BuildConnectionString(target));
+            await connection.OpenAsync();
+
+            await using var command = new MySqlCommand(query, connection);
+            command.Parameters.AddWithValue("@db", target.Database);
+
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                tableNames.Add(reader.GetString(0));
+            }
+
+            return tableNames;
+        }
+    }
+}

@@ -1,0 +1,498 @@
+﻿namespace Pegasus
+{
+    partial class Form1
+    {
+        /// <summary>
+        ///  Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        ///  Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        ///  Required method for Designer support - do not modify
+        ///  the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            groupConnectionA = new GroupBox();
+            txtDatabaseA = new TextBox();
+            txtPortA = new TextBox();
+            txtHostA = new TextBox();
+            lblDatabaseA = new Label();
+            lblPortA = new Label();
+            lblHostA = new Label();
+            groupConnectionB = new GroupBox();
+            txtDatabaseB = new TextBox();
+            txtPortB = new TextBox();
+            txtHostB = new TextBox();
+            lblDatabaseB = new Label();
+            lblPortB = new Label();
+            lblHostB = new Label();
+            lblUser = new Label();
+            txtUser = new TextBox();
+            lblPassword = new Label();
+            txtPassword = new TextBox();
+            lblEmpresa = new Label();
+            txtEmpresa = new TextBox();
+            lblBackupBase = new Label();
+            txtBackupBasePath = new TextBox();
+            btnChooseBackupFolder = new Button();
+            btnLoadTables = new Button();
+            splitTables = new SplitContainer();
+            checkedTablesA = new CheckedListBox();
+            checkedTablesB = new CheckedListBox();
+            btnSelectAllA = new Button();
+            btnUnselectAllA = new Button();
+            btnSelectAllB = new Button();
+            btnUnselectAllB = new Button();
+            lblTablesA = new Label();
+            lblTablesB = new Label();
+            btnBackup = new Button();
+            btnRestore = new Button();
+            txtLog = new TextBox();
+            folderBrowserDialog = new FolderBrowserDialog();
+            groupConnectionA.SuspendLayout();
+            groupConnectionB.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitTables).BeginInit();
+            splitTables.Panel1.SuspendLayout();
+            splitTables.Panel2.SuspendLayout();
+            splitTables.SuspendLayout();
+            SuspendLayout();
+            // 
+            // groupConnectionA
+            // 
+            groupConnectionA.Controls.Add(txtDatabaseA);
+            groupConnectionA.Controls.Add(txtPortA);
+            groupConnectionA.Controls.Add(txtHostA);
+            groupConnectionA.Controls.Add(lblDatabaseA);
+            groupConnectionA.Controls.Add(lblPortA);
+            groupConnectionA.Controls.Add(lblHostA);
+            groupConnectionA.Location = new Point(12, 12);
+            groupConnectionA.Name = "groupConnectionA";
+            groupConnectionA.Size = new Size(430, 111);
+            groupConnectionA.TabIndex = 0;
+            groupConnectionA.TabStop = false;
+            groupConnectionA.Text = "Conexão Banco A";
+            // 
+            // txtDatabaseA
+            // 
+            txtDatabaseA.Location = new Point(81, 75);
+            txtDatabaseA.Name = "txtDatabaseA";
+            txtDatabaseA.Size = new Size(330, 23);
+            txtDatabaseA.TabIndex = 5;
+            // 
+            // txtPortA
+            // 
+            txtPortA.Location = new Point(81, 46);
+            txtPortA.Name = "txtPortA";
+            txtPortA.Size = new Size(129, 23);
+            txtPortA.TabIndex = 3;
+            txtPortA.Text = "3306";
+            // 
+            // txtHostA
+            // 
+            txtHostA.Location = new Point(81, 17);
+            txtHostA.Name = "txtHostA";
+            txtHostA.Size = new Size(330, 23);
+            txtHostA.TabIndex = 1;
+            // 
+            // lblDatabaseA
+            // 
+            lblDatabaseA.AutoSize = true;
+            lblDatabaseA.Location = new Point(17, 78);
+            lblDatabaseA.Name = "lblDatabaseA";
+            lblDatabaseA.Size = new Size(56, 15);
+            lblDatabaseA.TabIndex = 4;
+            lblDatabaseA.Text = "Database";
+            // 
+            // lblPortA
+            // 
+            lblPortA.AutoSize = true;
+            lblPortA.Location = new Point(17, 49);
+            lblPortA.Name = "lblPortA";
+            lblPortA.Size = new Size(35, 15);
+            lblPortA.TabIndex = 2;
+            lblPortA.Text = "Porta";
+            // 
+            // lblHostA
+            // 
+            lblHostA.AutoSize = true;
+            lblHostA.Location = new Point(17, 20);
+            lblHostA.Name = "lblHostA";
+            lblHostA.Size = new Size(32, 15);
+            lblHostA.TabIndex = 0;
+            lblHostA.Text = "Host";
+            // 
+            // groupConnectionB
+            // 
+            groupConnectionB.Controls.Add(txtDatabaseB);
+            groupConnectionB.Controls.Add(txtPortB);
+            groupConnectionB.Controls.Add(txtHostB);
+            groupConnectionB.Controls.Add(lblDatabaseB);
+            groupConnectionB.Controls.Add(lblPortB);
+            groupConnectionB.Controls.Add(lblHostB);
+            groupConnectionB.Location = new Point(448, 12);
+            groupConnectionB.Name = "groupConnectionB";
+            groupConnectionB.Size = new Size(430, 111);
+            groupConnectionB.TabIndex = 1;
+            groupConnectionB.TabStop = false;
+            groupConnectionB.Text = "Conexão Banco B";
+            // 
+            // txtDatabaseB
+            // 
+            txtDatabaseB.Location = new Point(81, 75);
+            txtDatabaseB.Name = "txtDatabaseB";
+            txtDatabaseB.Size = new Size(330, 23);
+            txtDatabaseB.TabIndex = 5;
+            // 
+            // txtPortB
+            // 
+            txtPortB.Location = new Point(81, 46);
+            txtPortB.Name = "txtPortB";
+            txtPortB.Size = new Size(129, 23);
+            txtPortB.TabIndex = 3;
+            txtPortB.Text = "3306";
+            // 
+            // txtHostB
+            // 
+            txtHostB.Location = new Point(81, 17);
+            txtHostB.Name = "txtHostB";
+            txtHostB.Size = new Size(330, 23);
+            txtHostB.TabIndex = 1;
+            // 
+            // lblDatabaseB
+            // 
+            lblDatabaseB.AutoSize = true;
+            lblDatabaseB.Location = new Point(17, 78);
+            lblDatabaseB.Name = "lblDatabaseB";
+            lblDatabaseB.Size = new Size(56, 15);
+            lblDatabaseB.TabIndex = 4;
+            lblDatabaseB.Text = "Database";
+            // 
+            // lblPortB
+            // 
+            lblPortB.AutoSize = true;
+            lblPortB.Location = new Point(17, 49);
+            lblPortB.Name = "lblPortB";
+            lblPortB.Size = new Size(35, 15);
+            lblPortB.TabIndex = 2;
+            lblPortB.Text = "Porta";
+            // 
+            // lblHostB
+            // 
+            lblHostB.AutoSize = true;
+            lblHostB.Location = new Point(17, 20);
+            lblHostB.Name = "lblHostB";
+            lblHostB.Size = new Size(32, 15);
+            lblHostB.TabIndex = 0;
+            lblHostB.Text = "Host";
+            // 
+            // lblUser
+            // 
+            lblUser.AutoSize = true;
+            lblUser.Location = new Point(12, 136);
+            lblUser.Name = "lblUser";
+            lblUser.Size = new Size(47, 15);
+            lblUser.TabIndex = 2;
+            lblUser.Text = "Usuário";
+            // 
+            // txtUser
+            // 
+            txtUser.Location = new Point(67, 133);
+            txtUser.Name = "txtUser";
+            txtUser.Size = new Size(175, 23);
+            txtUser.TabIndex = 3;
+            // 
+            // lblPassword
+            // 
+            lblPassword.AutoSize = true;
+            lblPassword.Location = new Point(248, 136);
+            lblPassword.Name = "lblPassword";
+            lblPassword.Size = new Size(39, 15);
+            lblPassword.TabIndex = 4;
+            lblPassword.Text = "Senha";
+            // 
+            // txtPassword
+            // 
+            txtPassword.Location = new Point(293, 133);
+            txtPassword.Name = "txtPassword";
+            txtPassword.PasswordChar = '*';
+            txtPassword.Size = new Size(149, 23);
+            txtPassword.TabIndex = 5;
+            // 
+            // lblEmpresa
+            // 
+            lblEmpresa.AutoSize = true;
+            lblEmpresa.Location = new Point(448, 136);
+            lblEmpresa.Name = "lblEmpresa";
+            lblEmpresa.Size = new Size(54, 15);
+            lblEmpresa.TabIndex = 6;
+            lblEmpresa.Text = "Empresa";
+            // 
+            // txtEmpresa
+            // 
+            txtEmpresa.Location = new Point(508, 133);
+            txtEmpresa.Name = "txtEmpresa";
+            txtEmpresa.Size = new Size(176, 23);
+            txtEmpresa.TabIndex = 7;
+            // 
+            // lblBackupBase
+            // 
+            lblBackupBase.AutoSize = true;
+            lblBackupBase.Location = new Point(12, 166);
+            lblBackupBase.Name = "lblBackupBase";
+            lblBackupBase.Size = new Size(86, 15);
+            lblBackupBase.TabIndex = 8;
+            lblBackupBase.Text = "Pasta de backup";
+            // 
+            // txtBackupBasePath
+            // 
+            txtBackupBasePath.Location = new Point(104, 163);
+            txtBackupBasePath.Name = "txtBackupBasePath";
+            txtBackupBasePath.Size = new Size(698, 23);
+            txtBackupBasePath.TabIndex = 9;
+            // 
+            // btnChooseBackupFolder
+            // 
+            btnChooseBackupFolder.Location = new Point(808, 163);
+            btnChooseBackupFolder.Name = "btnChooseBackupFolder";
+            btnChooseBackupFolder.Size = new Size(70, 23);
+            btnChooseBackupFolder.TabIndex = 10;
+            btnChooseBackupFolder.Text = "...";
+            btnChooseBackupFolder.UseVisualStyleBackColor = true;
+            btnChooseBackupFolder.Click += btnChooseBackupFolder_Click;
+            // 
+            // btnLoadTables
+            // 
+            btnLoadTables.Location = new Point(690, 132);
+            btnLoadTables.Name = "btnLoadTables";
+            btnLoadTables.Size = new Size(188, 24);
+            btnLoadTables.TabIndex = 11;
+            btnLoadTables.Text = "Carregar tabelas";
+            btnLoadTables.UseVisualStyleBackColor = true;
+            btnLoadTables.Click += btnLoadTables_Click;
+            // 
+            // splitTables
+            // 
+            splitTables.Location = new Point(12, 192);
+            splitTables.Name = "splitTables";
+            // 
+            // splitTables.Panel1
+            // 
+            splitTables.Panel1.Controls.Add(lblTablesA);
+            splitTables.Panel1.Controls.Add(btnUnselectAllA);
+            splitTables.Panel1.Controls.Add(btnSelectAllA);
+            splitTables.Panel1.Controls.Add(checkedTablesA);
+            // 
+            // splitTables.Panel2
+            // 
+            splitTables.Panel2.Controls.Add(lblTablesB);
+            splitTables.Panel2.Controls.Add(btnUnselectAllB);
+            splitTables.Panel2.Controls.Add(btnSelectAllB);
+            splitTables.Panel2.Controls.Add(checkedTablesB);
+            splitTables.Size = new Size(866, 304);
+            splitTables.SplitterDistance = 430;
+            splitTables.TabIndex = 12;
+            // 
+            // checkedTablesA
+            // 
+            checkedTablesA.CheckOnClick = true;
+            checkedTablesA.FormattingEnabled = true;
+            checkedTablesA.Location = new Point(14, 29);
+            checkedTablesA.Name = "checkedTablesA";
+            checkedTablesA.Size = new Size(400, 256);
+            checkedTablesA.TabIndex = 0;
+            // 
+            // checkedTablesB
+            // 
+            checkedTablesB.CheckOnClick = true;
+            checkedTablesB.FormattingEnabled = true;
+            checkedTablesB.Location = new Point(15, 29);
+            checkedTablesB.Name = "checkedTablesB";
+            checkedTablesB.Size = new Size(401, 256);
+            checkedTablesB.TabIndex = 0;
+            // 
+            // btnSelectAllA
+            // 
+            btnSelectAllA.Location = new Point(220, 3);
+            btnSelectAllA.Name = "btnSelectAllA";
+            btnSelectAllA.Size = new Size(94, 23);
+            btnSelectAllA.TabIndex = 1;
+            btnSelectAllA.Text = "Marcar tudo";
+            btnSelectAllA.UseVisualStyleBackColor = true;
+            btnSelectAllA.Click += btnSelectAllA_Click;
+            // 
+            // btnUnselectAllA
+            // 
+            btnUnselectAllA.Location = new Point(320, 3);
+            btnUnselectAllA.Name = "btnUnselectAllA";
+            btnUnselectAllA.Size = new Size(94, 23);
+            btnUnselectAllA.TabIndex = 2;
+            btnUnselectAllA.Text = "Desmarcar";
+            btnUnselectAllA.UseVisualStyleBackColor = true;
+            btnUnselectAllA.Click += btnUnselectAllA_Click;
+            // 
+            // btnSelectAllB
+            // 
+            btnSelectAllB.Location = new Point(223, 3);
+            btnSelectAllB.Name = "btnSelectAllB";
+            btnSelectAllB.Size = new Size(94, 23);
+            btnSelectAllB.TabIndex = 1;
+            btnSelectAllB.Text = "Marcar tudo";
+            btnSelectAllB.UseVisualStyleBackColor = true;
+            btnSelectAllB.Click += btnSelectAllB_Click;
+            // 
+            // btnUnselectAllB
+            // 
+            btnUnselectAllB.Location = new Point(323, 3);
+            btnUnselectAllB.Name = "btnUnselectAllB";
+            btnUnselectAllB.Size = new Size(94, 23);
+            btnUnselectAllB.TabIndex = 2;
+            btnUnselectAllB.Text = "Desmarcar";
+            btnUnselectAllB.UseVisualStyleBackColor = true;
+            btnUnselectAllB.Click += btnUnselectAllB_Click;
+            // 
+            // lblTablesA
+            // 
+            lblTablesA.AutoSize = true;
+            lblTablesA.Location = new Point(14, 8);
+            lblTablesA.Name = "lblTablesA";
+            lblTablesA.Size = new Size(82, 15);
+            lblTablesA.TabIndex = 3;
+            lblTablesA.Text = "Tabelas banco A";
+            // 
+            // lblTablesB
+            // 
+            lblTablesB.AutoSize = true;
+            lblTablesB.Location = new Point(15, 8);
+            lblTablesB.Name = "lblTablesB";
+            lblTablesB.Size = new Size(82, 15);
+            lblTablesB.TabIndex = 3;
+            lblTablesB.Text = "Tabelas banco B";
+            // 
+            // btnBackup
+            // 
+            btnBackup.Location = new Point(12, 502);
+            btnBackup.Name = "btnBackup";
+            btnBackup.Size = new Size(190, 30);
+            btnBackup.TabIndex = 13;
+            btnBackup.Text = "Executar backup (estrutura + dados)";
+            btnBackup.UseVisualStyleBackColor = true;
+            btnBackup.Click += btnBackup_Click;
+            // 
+            // btnRestore
+            // 
+            btnRestore.Location = new Point(208, 502);
+            btnRestore.Name = "btnRestore";
+            btnRestore.Size = new Size(190, 30);
+            btnRestore.TabIndex = 14;
+            btnRestore.Text = "Restore de pasta de backup";
+            btnRestore.UseVisualStyleBackColor = true;
+            btnRestore.Click += btnRestore_Click;
+            // 
+            // txtLog
+            // 
+            txtLog.Location = new Point(404, 502);
+            txtLog.Multiline = true;
+            txtLog.Name = "txtLog";
+            txtLog.ReadOnly = true;
+            txtLog.ScrollBars = ScrollBars.Vertical;
+            txtLog.Size = new Size(474, 113);
+            txtLog.TabIndex = 15;
+            // 
+            // Form1
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(892, 627);
+            Controls.Add(txtLog);
+            Controls.Add(btnRestore);
+            Controls.Add(btnBackup);
+            Controls.Add(splitTables);
+            Controls.Add(btnLoadTables);
+            Controls.Add(btnChooseBackupFolder);
+            Controls.Add(txtBackupBasePath);
+            Controls.Add(lblBackupBase);
+            Controls.Add(txtEmpresa);
+            Controls.Add(lblEmpresa);
+            Controls.Add(txtPassword);
+            Controls.Add(lblPassword);
+            Controls.Add(txtUser);
+            Controls.Add(lblUser);
+            Controls.Add(groupConnectionB);
+            Controls.Add(groupConnectionA);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            Name = "Form1";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Backup/Restore MySQL-MariaDB";
+            Load += Form1_Load;
+            groupConnectionA.ResumeLayout(false);
+            groupConnectionA.PerformLayout();
+            groupConnectionB.ResumeLayout(false);
+            groupConnectionB.PerformLayout();
+            splitTables.Panel1.ResumeLayout(false);
+            splitTables.Panel1.PerformLayout();
+            splitTables.Panel2.ResumeLayout(false);
+            splitTables.Panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)splitTables).EndInit();
+            splitTables.ResumeLayout(false);
+            ResumeLayout(false);
+            PerformLayout();
+        }
+
+        #endregion
+
+        private GroupBox groupConnectionA;
+        private TextBox txtDatabaseA;
+        private TextBox txtPortA;
+        private TextBox txtHostA;
+        private Label lblDatabaseA;
+        private Label lblPortA;
+        private Label lblHostA;
+        private GroupBox groupConnectionB;
+        private TextBox txtDatabaseB;
+        private TextBox txtPortB;
+        private TextBox txtHostB;
+        private Label lblDatabaseB;
+        private Label lblPortB;
+        private Label lblHostB;
+        private Label lblUser;
+        private TextBox txtUser;
+        private Label lblPassword;
+        private TextBox txtPassword;
+        private Label lblEmpresa;
+        private TextBox txtEmpresa;
+        private Label lblBackupBase;
+        private TextBox txtBackupBasePath;
+        private Button btnChooseBackupFolder;
+        private Button btnLoadTables;
+        private SplitContainer splitTables;
+        private CheckedListBox checkedTablesA;
+        private CheckedListBox checkedTablesB;
+        private Button btnSelectAllA;
+        private Button btnUnselectAllA;
+        private Button btnSelectAllB;
+        private Button btnUnselectAllB;
+        private Label lblTablesA;
+        private Label lblTablesB;
+        private Button btnBackup;
+        private Button btnRestore;
+        private TextBox txtLog;
+        private FolderBrowserDialog folderBrowserDialog;
+    }
+}

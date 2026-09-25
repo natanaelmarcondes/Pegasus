@@ -1,0 +1,8 @@
+H:\DUMPS\Pegasus.exe
+H:\DUMPS\Pegasus.dll
+H:\DUMPS\Pegasus.deps.json
+H:\DUMPS\Pegasus.runtimeconfig.json
+H:\DUMPS\Pegasus.pdb
+H:\DUMPS\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+H:\DUMPS\Microsoft.Extensions.Logging.Abstractions.dll
+H:\DUMPS\MySqlConnector.dll
