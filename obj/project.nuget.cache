@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "DoAwulomh7c=",
+  "dgSpecHash": "VO2WvMJ/LzQ=",
   "success": true,
-  "projectFilePath": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
+  "projectFilePath": "D:\\Pegasus Backup\\Pegasus.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\natanael\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
-    "C:\\Users\\natanael\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
-    "C:\\Users\\natanael\\.nuget\\packages\\mysqlconnector\\2.4.0\\mysqlconnector.2.4.0.nupkg.sha512"
+    "C:\\Users\\Natanael\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\Natanael\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\Natanael\\.nuget\\packages\\mysqlconnector\\2.4.0\\mysqlconnector.2.4.0.nupkg.sha512"
   ],
   "logs": []
 }

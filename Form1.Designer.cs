@@ -76,6 +76,7 @@ namespace Pegasus
             panelFooter = new Panel();
             progressMain = new ProgressBar();
             lblProgress = new Label();
+            lblMensagemOperacao = new Label();
             btnSkipTable = new Button();
             btnRestore = new Button();
             btnBackup = new Button();
@@ -110,7 +111,7 @@ namespace Pegasus
             lblHeader.ForeColor = Color.White;
             lblHeader.Location = new Point(12, 9);
             lblHeader.Name = "lblHeader";
-            lblHeader.Size = new Size(268, 21);
+            lblHeader.Size = new Size(205, 21);
             lblHeader.TabIndex = 0;
             lblHeader.Text = "Backup/Restore de Dados";
             // 
@@ -392,12 +393,12 @@ namespace Pegasus
             dgvModulos.AllowUserToResizeRows = false;
             dgvModulos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvModulos.BackgroundColor = Color.White;
-            dgvModulos.RowHeadersVisible = false;
             dgvModulos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvModulos.Columns.AddRange(new DataGridViewColumn[] { colSelModulo, colModulo });
             dgvModulos.Location = new Point(5, 39);
             dgvModulos.MultiSelect = false;
             dgvModulos.Name = "dgvModulos";
+            dgvModulos.RowHeadersVisible = false;
             dgvModulos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvModulos.Size = new Size(175, 414);
             dgvModulos.TabIndex = 1;
@@ -438,13 +439,13 @@ namespace Pegasus
             panelA.Dock = DockStyle.Fill;
             panelA.Location = new Point(196, 3);
             panelA.Name = "panelA";
-            panelA.Size = new Size(499, 464);
+            panelA.Size = new Size(445, 464);
             panelA.TabIndex = 0;
             // 
             // btnUnselectAllA
             // 
             btnUnselectAllA.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUnselectAllA.Location = new Point(406, 9);
+            btnUnselectAllA.Location = new Point(352, 9);
             btnUnselectAllA.Name = "btnUnselectAllA";
             btnUnselectAllA.Size = new Size(83, 24);
             btnUnselectAllA.TabIndex = 3;
@@ -455,7 +456,7 @@ namespace Pegasus
             // btnSelectAllA
             // 
             btnSelectAllA.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnSelectAllA.Location = new Point(317, 9);
+            btnSelectAllA.Location = new Point(263, 9);
             btnSelectAllA.Name = "btnSelectAllA";
             btnSelectAllA.Size = new Size(83, 24);
             btnSelectAllA.TabIndex = 2;
@@ -470,14 +471,14 @@ namespace Pegasus
             dgvTablesA.AllowUserToResizeRows = false;
             dgvTablesA.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvTablesA.BackgroundColor = Color.White;
-            dgvTablesA.RowHeadersVisible = false;
             dgvTablesA.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvTablesA.Columns.AddRange(new DataGridViewColumn[] { colSelA, colTabelaA, colQtdA });
             dgvTablesA.Location = new Point(9, 39);
             dgvTablesA.MultiSelect = false;
             dgvTablesA.Name = "dgvTablesA";
+            dgvTablesA.RowHeadersVisible = false;
             dgvTablesA.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvTablesA.Size = new Size(480, 414);
+            dgvTablesA.Size = new Size(426, 414);
             dgvTablesA.TabIndex = 1;
             // 
             // colSelA
@@ -518,9 +519,9 @@ namespace Pegasus
             panelStatus.Controls.Add(dgvStatus);
             panelStatus.Controls.Add(lblStatus);
             panelStatus.Dock = DockStyle.Fill;
-            panelStatus.Location = new Point(701, 3);
+            panelStatus.Location = new Point(647, 3);
             panelStatus.Name = "panelStatus";
-            panelStatus.Size = new Size(372, 464);
+            panelStatus.Size = new Size(426, 464);
             panelStatus.TabIndex = 2;
             // 
             // dgvStatus
@@ -530,15 +531,15 @@ namespace Pegasus
             dgvStatus.AllowUserToResizeRows = false;
             dgvStatus.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvStatus.BackgroundColor = Color.White;
-            dgvStatus.RowHeadersVisible = false;
             dgvStatus.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvStatus.Columns.AddRange(new DataGridViewColumn[] { colStatusTabela, colStatusEtapa, colStatusRegistros });
             dgvStatus.Location = new Point(10, 39);
             dgvStatus.MultiSelect = false;
             dgvStatus.Name = "dgvStatus";
             dgvStatus.ReadOnly = true;
+            dgvStatus.RowHeadersVisible = false;
             dgvStatus.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvStatus.Size = new Size(351, 414);
+            dgvStatus.Size = new Size(405, 414);
             dgvStatus.TabIndex = 1;
             dgvStatus.CellPainting += dgvStatus_CellPainting;
             // 
@@ -584,15 +585,15 @@ namespace Pegasus
             panelFooter.Controls.Add(btnSkipTable);
             panelFooter.Controls.Add(btnRestore);
             panelFooter.Controls.Add(btnBackup);
-            panelFooter.Location = new Point(12, 599);
+            panelFooter.Location = new Point(12, 615);
             panelFooter.Name = "panelFooter";
-            panelFooter.Size = new Size(1076, 62);
+            panelFooter.Size = new Size(1076, 64);
             panelFooter.TabIndex = 5;
             // 
             // progressMain
             // 
             progressMain.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            progressMain.Location = new Point(510, 28);
+            progressMain.Location = new Point(510, 34);
             progressMain.Name = "progressMain";
             progressMain.Size = new Size(549, 18);
             progressMain.TabIndex = 3;
@@ -601,11 +602,23 @@ namespace Pegasus
             // 
             lblProgress.AutoSize = true;
             lblProgress.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblProgress.Location = new Point(510, 8);
+            lblProgress.Location = new Point(510, 3);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(130, 15);
             lblProgress.TabIndex = 2;
             lblProgress.Text = "Progresso: 0 de 0 (0%)";
+            // 
+            // lblMensagemOperacao
+            // 
+            lblMensagemOperacao.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblMensagemOperacao.AutoEllipsis = true;
+            lblMensagemOperacao.Font = new Font("Segoe UI", 9F);
+            lblMensagemOperacao.ForeColor = Color.FromArgb(55, 65, 81);
+            lblMensagemOperacao.Location = new Point(12, 597);
+            lblMensagemOperacao.Name = "lblMensagemOperacao";
+            lblMensagemOperacao.Size = new Size(486, 15);
+            lblMensagemOperacao.TabIndex = 5;
+            lblMensagemOperacao.Text = "Pronto.";
             // 
             // btnSkipTable
             // 
@@ -614,7 +627,7 @@ namespace Pegasus
             btnSkipTable.FlatStyle = FlatStyle.Flat;
             btnSkipTable.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnSkipTable.ForeColor = Color.White;
-            btnSkipTable.Location = new Point(174, 11);
+            btnSkipTable.Location = new Point(174, 20);
             btnSkipTable.Name = "btnSkipTable";
             btnSkipTable.Size = new Size(158, 40);
             btnSkipTable.TabIndex = 4;
@@ -629,7 +642,7 @@ namespace Pegasus
             btnRestore.FlatStyle = FlatStyle.Flat;
             btnRestore.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnRestore.ForeColor = Color.White;
-            btnRestore.Location = new Point(338, 11);
+            btnRestore.Location = new Point(338, 20);
             btnRestore.Name = "btnRestore";
             btnRestore.Size = new Size(158, 40);
             btnRestore.TabIndex = 1;
@@ -643,7 +656,7 @@ namespace Pegasus
             btnBackup.FlatStyle = FlatStyle.Flat;
             btnBackup.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnBackup.ForeColor = Color.White;
-            btnBackup.Location = new Point(10, 11);
+            btnBackup.Location = new Point(10, 20);
             btnBackup.Name = "btnBackup";
             btnBackup.Size = new Size(158, 40);
             btnBackup.TabIndex = 0;
@@ -659,6 +672,7 @@ namespace Pegasus
             ClientSize = new Size(1100, 675);
             Controls.Add(btnLoadTables);
             Controls.Add(panelFooter);
+            Controls.Add(lblMensagemOperacao);
             Controls.Add(tableMain);
             Controls.Add(panelPath);
             Controls.Add(panelHeader);
@@ -732,6 +746,7 @@ namespace Pegasus
         private Panel panelFooter;
         private ProgressBar progressMain;
         private Label lblProgress;
+        private Label lblMensagemOperacao;
         private Button btnSkipTable;
         private Button btnRestore;
         private Button btnBackup;

@@ -162,7 +162,12 @@ namespace Pegasus
 
         private void Log(string message)
         {
-            dgvStatus.Rows.Add("Sistema", message, "");
+            lblMensagemOperacao.ForeColor = message.StartsWith("Erro", StringComparison.OrdinalIgnoreCase)
+                ? Color.FromArgb(192, 57, 43)
+                : message.StartsWith("Aviso", StringComparison.OrdinalIgnoreCase)
+                    ? Color.FromArgb(180, 83, 9)
+                    : Color.FromArgb(55, 65, 81);
+            lblMensagemOperacao.Text = message;
         }
 
         private void MPrc_LimparStatusOperacional()

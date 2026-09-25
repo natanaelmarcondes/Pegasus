@@ -19,3 +19,25 @@ H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\refint\Pegasus.dll
 H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\Pegasus.pdb
 H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\Pegasus.genruntimeconfig.cache
 H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\ref\Pegasus.dll
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Pegasus.exe
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Pegasus.deps.json
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Pegasus.runtimeconfig.json
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Pegasus.dll
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Pegasus.pdb
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+D:\Pegasus Backup\bin\Debug\net9.0-windows\Microsoft.Extensions.Logging.Abstractions.dll
+D:\Pegasus Backup\bin\Debug\net9.0-windows\MySqlConnector.dll
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.csproj.AssemblyReference.cache
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.Form1.resources
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.csproj.GenerateResource.cache
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.GeneratedMSBuildEditorConfig.editorconfig
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.AssemblyInfoInputs.cache
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.AssemblyInfo.cs
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.csproj.CoreCompileInputs.cache
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.sourcelink.json
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.csproj.Up2Date
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.dll
+D:\Pegasus Backup\obj\Debug\net9.0-windows\refint\Pegasus.dll
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.pdb
+D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.genruntimeconfig.cache
+D:\Pegasus Backup\obj\Debug\net9.0-windows\ref\Pegasus.dll
