@@ -1,4 +1,4 @@
-namespace Pegasus
+﻿namespace Pegasus
 {
     partial class Form1
     {
@@ -713,7 +713,6 @@ namespace Pegasus
             Controls.Add(panelPath);
             Controls.Add(panelHeader);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            ShowInTaskbar = true;
             MinimumSize = new Size(1116, 714);
             Name = "Form1";
             StartPosition = FormStartPosition.CenterScreen;

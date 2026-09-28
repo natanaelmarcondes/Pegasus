@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using MySqlConnector;
 
 namespace Pegasus
@@ -37,7 +37,7 @@ namespace Pegasus
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
-            ShowInTaskbar = true;
+            ShowInTaskbar = false;
             BackColor = _corFundo;
             ClientSize = new Size(900, 560);
 

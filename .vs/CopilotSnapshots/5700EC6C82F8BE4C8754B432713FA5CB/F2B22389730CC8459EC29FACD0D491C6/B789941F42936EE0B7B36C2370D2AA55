@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -161,7 +161,6 @@ namespace Pegasus
         private bool MPrc_AbrirConfiguracaoInicial()
         {
             using var telaConfig = new FormConfiguracaoInicial();
-            telaConfig.Icon = Icon;
             if (telaConfig.ShowDialog(this) != DialogResult.OK)
             {
                 return false;
