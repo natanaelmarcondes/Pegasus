@@ -7,21 +7,19 @@ namespace Pegasus
     {
         private readonly IniService _iniService = new();
         private KeyIniConexaoService? _servicoConexoes;
-        private readonly TextBox _txtPastaExecutaveis = new() { Width = 520 };
-        private readonly Button _btnSelecionarPastaExecutaveis = new() { Text = "...", Width = 36 };
         private readonly ComboBox _cboConexoes = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 380 };
         private readonly Button _btnRecarregarConexoes = new() { Text = "Recarregar", Width = 100 };
         private readonly Button _btnCopiarParaB = new() { Text = "Copiar A → B", Width = 120 };
-        private readonly TextBox _txtHostA = new() { Width = 220 , Text = "192.168.1.14" };
+        private readonly TextBox _txtHostA = new() { Width = 220, Text = "192.168.1.14" };
         private readonly TextBox _txtPortA = new() { Width = 80, Text = "3306" };
-        private readonly TextBox _txtDatabaseA = new() { Width = 220 , Text = "gdrwa" };
-        private readonly TextBox _txtUserA = new() { Width = 220 , Text = "root" };
+        private readonly TextBox _txtDatabaseA = new() { Width = 220, Text = "gdrwa" };
+        private readonly TextBox _txtUserA = new() { Width = 220, Text = "root" };
         private readonly TextBox _txtPasswordA = new() { Width = 220, UseSystemPasswordChar = true };
 
-        private readonly TextBox _txtHostB = new() { Width = 220 , Text = "192.168.1.14" };
+        private readonly TextBox _txtHostB = new() { Width = 220, Text = "192.168.1.14" };
         private readonly TextBox _txtPortB = new() { Width = 80, Text = "3306" };
-        private readonly TextBox _txtDatabaseB = new() { Width = 220 , Text = "gdrwb" };
-        private readonly TextBox _txtUserB = new() { Width = 220 ,Text = "root" };
+        private readonly TextBox _txtDatabaseB = new() { Width = 220, Text = "gdrwb" };
+        private readonly TextBox _txtUserB = new() { Width = 220, Text = "root" };
         private readonly TextBox _txtPasswordB = new() { Width = 220, UseSystemPasswordChar = true };
 
         private readonly Color _corPrimaria = Color.FromArgb(22, 120, 150);
@@ -30,7 +28,7 @@ namespace Pegasus
 
         public BancoConfiguracao ConfigBancoA { get; private set; } = null!;
         public BancoConfiguracao ConfigBancoB { get; private set; } = null!;
-        public string PastaExecutaveisSelecionada { get; private set; } = string.Empty;
+        public string NomeConexaoSelecionada { get; private set; } = string.Empty;
 
         public FormConfiguracaoInicial()
         {
@@ -68,35 +66,13 @@ namespace Pegasus
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 4,
+                RowCount = 3,
             };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            var panelPasta = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
-                Dock = DockStyle.Fill,
-                WrapContents = false,
-                AutoSize = true,
-                BackColor = _corCard,
-                Padding = new Padding(8, 6, 8, 6),
-            };
-            panelPasta.Controls.Add(new Label
-            {
-                Text = "Pasta executáveis",
-                AutoSize = true,
-                Padding = new Padding(0, 6, 8, 0),
-            });
-            _txtPastaExecutaveis.Width = 670;
-            panelPasta.Controls.Add(_txtPastaExecutaveis);
-            panelPasta.Controls.Add(_btnSelecionarPastaExecutaveis);
-            root.SetColumnSpan(panelPasta, 2);
-            root.Controls.Add(panelPasta, 0, 0);
 
             var panelConexao = new FlowLayoutPanel
             {
@@ -117,14 +93,13 @@ namespace Pegasus
             panelConexao.Controls.Add(_cboConexoes);
             panelConexao.Controls.Add(_btnRecarregarConexoes);
             root.SetColumnSpan(panelConexao, 2);
-            root.Controls.Add(panelConexao, 0, 1);
+            root.Controls.Add(panelConexao, 0, 0);
 
-            root.Controls.Add(CriarPainelBanco("Banco A", _txtHostA, _txtPortA, _txtDatabaseA, _txtUserA, _txtPasswordA), 0, 2);
-            root.Controls.Add(CriarPainelBanco("Banco B", _txtHostB, _txtPortB, _txtDatabaseB, _txtUserB, _txtPasswordB), 1, 2);
+            root.Controls.Add(CriarPainelBanco("Banco A", _txtHostA, _txtPortA, _txtDatabaseA, _txtUserA, _txtPasswordA, _btnCopiarParaB), 0, 1);
+            root.Controls.Add(CriarPainelBanco("Banco B", _txtHostB, _txtPortB, _txtDatabaseB, _txtUserB, _txtPasswordB), 1, 1);
 
             _btnCopiarParaB.Click += (_, _) => MPrc_CopiarBancoAParaBancoB();
             _btnRecarregarConexoes.Click += (_, _) => CarregarConexoes();
-            _btnSelecionarPastaExecutaveis.Click += (_, _) => MPrc_SelecionarPastaExecutaveis();
             _cboConexoes.SelectedIndexChanged += cboConexoes_SelectedIndexChanged;
 
             var panelButtons = new FlowLayoutPanel
@@ -136,24 +111,22 @@ namespace Pegasus
             };
 
             var btnOk = new Button { Text = "Confirmar", Width = 110, DialogResult = DialogResult.None };
-            var btnCancel = new Button { Text = "Cancelar", Width = 110, DialogResult = DialogResult.Cancel };
+            var btnCancel = new Button { Text = "Sair", Width = 110, DialogResult = DialogResult.Cancel };
             var btnTestar = new Button { Text = "Testar conexões", Width = 130, DialogResult = DialogResult.None };
             MPrc_EstiloBotaoPrincipal(btnOk, Color.FromArgb(0, 150, 136));
             MPrc_EstiloBotaoPrincipal(btnTestar, Color.FromArgb(35, 144, 178));
             MPrc_EstiloBotaoPrincipal(btnCancel, Color.FromArgb(85, 93, 104));
             MPrc_EstiloBotaoSecundario(_btnCopiarParaB);
             MPrc_EstiloBotaoSecundario(_btnRecarregarConexoes);
-            MPrc_EstiloBotaoSecundario(_btnSelecionarPastaExecutaveis);
             btnOk.Click += (_, _) => MPrc_Confirmar();
             btnTestar.Click += async (_, _) => await MPrc_TestarConexoesAsync();
 
-            panelButtons.Controls.Add(btnOk);
             panelButtons.Controls.Add(btnCancel);
             panelButtons.Controls.Add(btnTestar);
-            panelButtons.Controls.Add(_btnCopiarParaB);
+            panelButtons.Controls.Add(btnOk);
 
             root.SetColumnSpan(panelButtons, 2);
-            root.Controls.Add(panelButtons, 0, 3);
+            root.Controls.Add(panelButtons, 0, 2);
 
             panelBody.Controls.Add(root);
             Controls.Add(panelBody);
@@ -162,11 +135,6 @@ namespace Pegasus
             CancelButton = btnCancel;
 
             MPrc_EstiloCampos();
-
-            _txtPastaExecutaveis.Text = string.IsNullOrWhiteSpace(ConfiguracaoRuntime.DiretorioConfigIni)
-                ? string.Empty
-                : ConfiguracaoRuntime.DiretorioConfigIni;
-            ConfiguracaoRuntime.DiretorioConfigIni = _txtPastaExecutaveis.Text.Trim();
 
             CarregarConexoes();
         }
@@ -177,7 +145,6 @@ namespace Pegasus
             _cboConexoes.Items.Clear();
             _cboConexoes.Text = string.Empty;
 
-            ConfiguracaoRuntime.DiretorioConfigIni = _txtPastaExecutaveis.Text.Trim();
             var caminhoIni = _iniService.ObterCaminhoIni("KEY.INI");
 
             IReadOnlyList<ConfiguracaoConexao> conexoes;
@@ -219,25 +186,6 @@ namespace Pegasus
             }
 
             MessageBox.Show($"KEY.INI encontrado, mas nenhuma conexão válida foi localizada na seção CONFIGURACAO.\nArquivo: {caminhoIni}", "Conexões", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void MPrc_SelecionarPastaExecutaveis()
-        {
-            using var dialog = new FolderBrowserDialog
-            {
-                Description = "Selecione a pasta dos executáveis (onde está o KEY.INI)",
-                SelectedPath = _txtPastaExecutaveis.Text.Trim(),
-                ShowNewFolderButton = false,
-            };
-
-            if (dialog.ShowDialog(this) != DialogResult.OK)
-            {
-                return;
-            }
-
-            _txtPastaExecutaveis.Text = dialog.SelectedPath;
-            ConfiguracaoRuntime.DiretorioConfigIni = dialog.SelectedPath;
-            CarregarConexoes();
         }
 
         private void cboConexoes_SelectedIndexChanged(object? sender, EventArgs e)
@@ -292,7 +240,7 @@ namespace Pegasus
             return database + "b";
         }
 
-        private static GroupBox CriarPainelBanco(string titulo, TextBox txtHost, TextBox txtPort, TextBox txtDb, TextBox txtUser, TextBox txtPass)
+        private static GroupBox CriarPainelBanco(string titulo, TextBox txtHost, TextBox txtPort, TextBox txtDb, TextBox txtUser, TextBox txtPass, Button? botaoAcao = null)
         {
             var panel = new GroupBox
             {
@@ -324,18 +272,32 @@ namespace Pegasus
             layout.Controls.Add(new Label { Text = "Usuário", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 3);
             layout.Controls.Add(txtUser, 1, 3);
 
-            layout.Controls.Add(new Label { Text = "Senha", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 4);
+            layout.Controls.Add(new Label { Text = "Senha", AutoSize = true, Anchor = AnchorStyles.Top | AnchorStyles.Left }, 0, 4);
             layout.Controls.Add(txtPass, 1, 4);
 
-            panel.Controls.Add(layout);
+            if (botaoAcao is null)
+            {
+                panel.Controls.Add(layout);
+            }
+            else
+            {
+                var panelAcao = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Bottom,
+                    FlowDirection = FlowDirection.RightToLeft,
+                    Height = 42,
+                    Padding = new Padding(0, 4, 4, 4),
+                };
+                panelAcao.Controls.Add(botaoAcao);
+                panel.Controls.Add(layout);
+                panel.Controls.Add(panelAcao);
+            }
+
             return panel;
         }
 
         private void MPrc_Confirmar()
         {
-            PastaExecutaveisSelecionada = _txtPastaExecutaveis.Text.Trim();
-            ConfiguracaoRuntime.DiretorioConfigIni = PastaExecutaveisSelecionada;
-
             if (!MFcn_TentarCriarConfiguracao(_txtHostA.Text, _txtPortA.Text, _txtDatabaseA.Text, _txtUserA.Text, _txtPasswordA.Text, "A", out var configA))
             {
                 return;
@@ -348,6 +310,7 @@ namespace Pegasus
 
             ConfigBancoA = configA!;
             ConfigBancoB = configB!;
+            NomeConexaoSelecionada = (_cboConexoes.SelectedItem as ConfiguracaoConexao)?.Nome ?? "Manual";
 
             DialogResult = DialogResult.OK;
             Close();
@@ -426,7 +389,6 @@ namespace Pegasus
         {
             var campos = new[]
             {
-                _txtPastaExecutaveis,
                 _txtHostA, _txtPortA, _txtDatabaseA, _txtUserA, _txtPasswordA,
                 _txtHostB, _txtPortB, _txtDatabaseB, _txtUserB, _txtPasswordB,
             };
@@ -449,6 +411,11 @@ namespace Pegasus
             botao.FlatAppearance.BorderSize = 0;
             botao.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             botao.Height = 34;
+        }
+
+        private void InitializeComponent()
+        {
+
         }
 
         private static void MPrc_EstiloBotaoSecundario(Button botao)

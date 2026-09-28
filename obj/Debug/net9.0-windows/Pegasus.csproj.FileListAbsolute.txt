@@ -42,3 +42,4 @@ D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.pdb
 D:\Pegasus Backup\obj\Debug\net9.0-windows\Pegasus.genruntimeconfig.cache
 D:\Pegasus Backup\obj\Debug\net9.0-windows\ref\Pegasus.dll
 H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\Pegasus.sourcelink.json
+H:\Pegasus\Pegasus\obj\Debug\net9.0-windows\Pegasus.FormConfiguracaoInicial.resources

@@ -40,8 +40,10 @@ namespace Pegasus
         private readonly IniService _iniService = new();
         private BancoConfiguracao? _configBancoA;
         private BancoConfiguracao? _configBancoB;
+        private string _nomeConexaoSelecionada = string.Empty;
         private CancellationTokenSource? _backupCancellation;
         private bool _backupEmExecucao;
+        private bool _permitirFechamento;
         private bool _pularTabelaSolicitado;
         private string _chaveTabelaEmProcessamento = string.Empty;
         private char? _ultimaTeclaModulo;
@@ -64,6 +66,7 @@ namespace Pegasus
         {
             if (!MPrc_AbrirConfiguracaoInicial())
             {
+                _permitirFechamento = true;
                 Close();
                 return;
             }
@@ -72,6 +75,35 @@ namespace Pegasus
             MPrc_CarregarUltimoDiretorioBackupRestore();
             Log("Conexões carregadas da configuração inicial. Clique em Carregar Tabelas.");
             UpdateProgress(0, 0);
+        }
+
+        private void Form1_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            if (_permitirFechamento || e.CloseReason != CloseReason.UserClosing)
+            {
+                return;
+            }
+
+            e.Cancel = true;
+            if (UseWaitCursor)
+            {
+                return;
+            }
+
+            Hide();
+            if (MPrc_AbrirConfiguracaoInicial())
+            {
+                lblHeader.Text = $"Backup/Restore de Dados | Conexão: {_nomeConexaoSelecionada}";
+                _wmMetadataKeyTabelas.Clear();
+                MPrc_LimparListaTabelas();
+                Log("Conexão selecionada. Clique em Carregar Tabelas.");
+                Show();
+                Activate();
+                return;
+            }
+
+            _permitirFechamento = true;
+            BeginInvoke(Close);
         }
 
         private void MPrc_CarregarUltimoDiretorioBackupRestore()
@@ -121,6 +153,7 @@ namespace Pegasus
 
             _configBancoA = telaConfig.ConfigBancoA;
             _configBancoB = telaConfig.ConfigBancoB;
+            _nomeConexaoSelecionada = telaConfig.NomeConexaoSelecionada;
             
             return true;
         }
@@ -141,6 +174,7 @@ namespace Pegasus
             lblTablesA.Text = "Tabelas";
             dgvTablesA.SortCompare += dgvTablesA_SortCompare;
             MPrc_AplicarModoOperacao(false);
+            lblHeader.Text = $"Backup/Restore de Dados - {_nomeConexaoSelecionada}";
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -1269,7 +1303,15 @@ FROM KEY_TABELAS;";
 
                 var backupDirectory = BuildBackupDirectory();
                 Directory.CreateDirectory(backupDirectory);
-                txtBackupBasePath.Text = backupDirectory;
+                _carregandoCaminhoBackup = true;
+                try
+                {
+                    txtBackupBasePath.Text = backupDirectory;
+                }
+                finally
+                {
+                    _carregandoCaminhoBackup = false;
+                }
                 Log($"Gerando backup em: {backupDirectory}");
 
                 var processed = 0;

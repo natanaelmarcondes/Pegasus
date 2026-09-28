@@ -694,6 +694,7 @@ namespace Pegasus
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Kesystems - Backup/Restore";
             Load += Form1_Load;
+            FormClosing += Form1_FormClosing;
             panelHeader.ResumeLayout(false);
             panelHeader.PerformLayout();
             panelPath.ResumeLayout(false);
