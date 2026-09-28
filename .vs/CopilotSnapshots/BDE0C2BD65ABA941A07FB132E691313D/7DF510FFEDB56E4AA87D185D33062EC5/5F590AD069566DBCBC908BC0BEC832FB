@@ -1,4 +1,4 @@
-namespace Pegasus
+﻿namespace Pegasus
 {
     partial class Form1
     {
@@ -358,7 +358,7 @@ namespace Pegasus
             tableMain.Name = "tableMain";
             tableMain.RowCount = 1;
             tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableMain.Size = new Size(1076, 470);
+            tableMain.Size = new Size(1076, 439);
             tableMain.TabIndex = 4;
             // 
             // panelModulos
@@ -618,10 +618,12 @@ namespace Pegasus
             panelFooter.BorderStyle = BorderStyle.FixedSingle;
             panelFooter.Controls.Add(progressMain);
             panelFooter.Controls.Add(lblProgress);
+            panelFooter.Controls.Add(lblTableProgress);
+            panelFooter.Controls.Add(progressTable);
             panelFooter.Controls.Add(btnSkipTable);
             panelFooter.Controls.Add(btnRestore);
             panelFooter.Controls.Add(btnBackup);
-            panelFooter.Location = new Point(12, 615);
+            panelFooter.Location = new Point(12, 584);
             panelFooter.Name = "panelFooter";
             panelFooter.Size = new Size(1076, 55);
             panelFooter.TabIndex = 5;

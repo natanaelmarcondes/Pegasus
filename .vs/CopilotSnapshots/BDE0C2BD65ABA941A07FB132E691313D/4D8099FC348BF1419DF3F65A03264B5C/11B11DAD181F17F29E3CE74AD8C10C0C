@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1478,7 +1478,6 @@ FROM KEY_TABELAS;";
                 SetBusy(true);
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalOperacoes);
-                ResetTableProgress();
 
                 var processed = 0;
                 await using var connectionA = new MySqlConnection(BuildConnectionString(targetA!));
@@ -1876,7 +1875,6 @@ ORDER BY TABLE_NAME;";
 
             await using var command = new MySqlCommand(sql.ToString(), connection);
             await command.ExecuteNonQueryAsync(cancellationToken);
-            progressoLote(rows.Count);
         }
 
         private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql, CancellationToken cancellationToken)

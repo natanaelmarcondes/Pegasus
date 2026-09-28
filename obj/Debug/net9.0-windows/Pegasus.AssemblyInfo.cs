@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Pegasus")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8909f3ed5479b04d2570298d07f0f16ec18bb0ea")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+12bc26a3c79cc97125a100671de63342740f2868")]
 [assembly: System.Reflection.AssemblyProductAttribute("Pegasus")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Pegasus")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

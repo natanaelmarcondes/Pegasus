@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1053,11 +1053,6 @@ FROM KEY_TABELAS;";
             lblTableProgress.Text = $"Tabela: {alias}.{table} | {MFcn_FormatarQuantidade(processed)} de {MFcn_FormatarQuantidade(total)} registro(s) ({percentual}%)";
         }
 
-        private void SetTableProgressStatus(string status, string alias, string table)
-        {
-            lblTableProgress.Text = $"{status}: {alias}.{table}";
-        }
-
         private void dgvStatus_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex != colStatusEtapa.Index)
@@ -1423,7 +1418,6 @@ FROM KEY_TABELAS;";
                 btnRestore.Text = "Cancelar Restore";
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalArquivos);
-                ResetTableProgress();
 
                 var summary = await RestoreFilesAsync(targetA!, targetB!, selecionadas, 0, totalArquivos, _backupCancellation.Token);
                 UpdateProgress(summary.Processed, totalArquivos);
@@ -1478,7 +1472,6 @@ FROM KEY_TABELAS;";
                 SetBusy(true);
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalOperacoes);
-                ResetTableProgress();
 
                 var processed = 0;
                 await using var connectionA = new MySqlConnection(BuildConnectionString(targetA!));
@@ -1655,7 +1648,6 @@ ORDER BY TABLE_NAME;";
                 }
 
                 AddStatus(target.Alias, tabela.NomeFisico, "Pulada", rowCount);
-                SetTableProgressStatus("Tabela pulada", target.Alias, tabela.NomeFisico);
                 processed++;
                 UpdateProgress(processed, total);
                 return processed;
@@ -1668,7 +1660,6 @@ ORDER BY TABLE_NAME;";
                 }
 
                 AddStatus(target.Alias, tabela.NomeFisico, "Cancelado", rowCount);
-                SetTableProgressStatus("Backup cancelado", target.Alias, tabela.NomeFisico);
                 throw;
             }
             catch
@@ -1679,7 +1670,6 @@ ORDER BY TABLE_NAME;";
                 }
 
                 AddStatus(target.Alias, tabela.NomeFisico, "Erro", rowCount);
-                SetTableProgressStatus("Falha no backup", target.Alias, tabela.NomeFisico);
                 throw;
             }
             finally
@@ -1861,7 +1851,7 @@ ORDER BY TABLE_NAME;";
             return Math.Max(32768, maxAllowed - 8192);
         }
 
-        private static async Task MPrc_ExecutarInsertLoteAsync(MySqlConnection connection, string insertPrefix, IReadOnlyList<string> rows, Action<int> progressoLote, CancellationToken cancellationToken)
+        private static async Task MPrc_ExecutarInsertLoteAsync(MySqlConnection connection, string insertPrefix, IReadOnlyList<string> rows, CancellationToken cancellationToken)
         {
             if (rows.Count == 0)
             {
@@ -1876,7 +1866,6 @@ ORDER BY TABLE_NAME;";
 
             await using var command = new MySqlCommand(sql.ToString(), connection);
             await command.ExecuteNonQueryAsync(cancellationToken);
-            progressoLote(rows.Count);
         }
 
         private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql, CancellationToken cancellationToken)
@@ -1957,7 +1946,7 @@ ORDER BY TABLE_NAME;";
                 RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private static async Task MPrc_RestaurarArquivoKeyBackupAsync(MySqlConnection connection, string filePath, Action<int> progressoLote, CancellationToken cancellationToken)
+        private static async Task MPrc_RestaurarArquivoKeyBackupAsync(MySqlConnection connection, string filePath, CancellationToken cancellationToken)
         {
             var packetLimite = await MFcn_ObterMaxAllowedPacketAsync(connection, cancellationToken);
             var structureBuilder = new StringBuilder();
@@ -2128,7 +2117,7 @@ ORDER BY TABLE_NAME;";
                 {
                     if (!string.IsNullOrWhiteSpace(insertPrefix))
                     {
-                        await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
+                        await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                     }
 
                     dataRows.Clear();
@@ -2159,7 +2148,7 @@ ORDER BY TABLE_NAME;";
                 var precisaEnviar = dataRows.Count >= RestoreBatchMaxRows || (batchBytes + rowBytes) >= packetLimite;
                 if (precisaEnviar)
                 {
-                    await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
+                    await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                     dataRows.Clear();
                     batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
                 }
@@ -2170,7 +2159,7 @@ ORDER BY TABLE_NAME;";
 
             if (!string.IsNullOrWhiteSpace(insertPrefix) && dataRows.Count > 0)
             {
-                await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
+                await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                 // final table enable keys
                 await TryEnableKeysAsync(currentInsertTable);
                 currentInsertTable = null;
@@ -2204,27 +2193,15 @@ ORDER BY TABLE_NAME;";
                     try
                     {
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Restaurando", tabela.RegistrosA);
-                        long registrosProcessados = 0;
-                        UpdateTableProgress(targetA.Alias, tabela.NomeFisico, 0, tabela.RegistrosA);
-                        await MPrc_RestaurarArquivoKeyBackupAsync(
-                            connectionA,
-                            tabela.ArquivoA,
-                            quantidade =>
-                            {
-                                registrosProcessados += quantidade;
-                                UpdateTableProgress(targetA.Alias, tabela.NomeFisico, registrosProcessados, tabela.RegistrosA);
-                            },
-                            cancellationToken);
+                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionA, tabela.ArquivoA, cancellationToken);
 
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosA);
-                        UpdateTableProgress(targetA.Alias, tabela.NomeFisico, registrosProcessados, tabela.RegistrosA, true);
                         processed++;
                         UpdateProgress(processed, total);
                     }
                     catch (OperationCanceledException)
                     {
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosA);
-                        SetTableProgressStatus("Restore cancelado", targetA.Alias, tabela.NomeFisico);
                         throw;
                     }
                     catch (Exception ex)
@@ -2232,12 +2209,10 @@ ORDER BY TABLE_NAME;";
                         if (cancellationToken.IsCancellationRequested)
                         {
                             AddStatus(targetA.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosA);
-                            SetTableProgressStatus("Restore cancelado", targetA.Alias, tabela.NomeFisico);
                             throw new OperationCanceledException(cancellationToken);
                         }
 
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosA);
-                        SetTableProgressStatus("Falha no restore", targetA.Alias, tabela.NomeFisico);
                         errors++;
                         processed++;
                         UpdateProgress(processed, total);
@@ -2250,27 +2225,15 @@ ORDER BY TABLE_NAME;";
                     try
                     {
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Restaurando", tabela.RegistrosB);
-                        long registrosProcessados = 0;
-                        UpdateTableProgress(targetB.Alias, tabela.NomeFisico, 0, tabela.RegistrosB);
-                        await MPrc_RestaurarArquivoKeyBackupAsync(
-                            connectionB,
-                            tabela.ArquivoB,
-                            quantidade =>
-                            {
-                                registrosProcessados += quantidade;
-                                UpdateTableProgress(targetB.Alias, tabela.NomeFisico, registrosProcessados, tabela.RegistrosB);
-                            },
-                            cancellationToken);
+                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionB, tabela.ArquivoB, cancellationToken);
 
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosB);
-                        UpdateTableProgress(targetB.Alias, tabela.NomeFisico, registrosProcessados, tabela.RegistrosB, true);
                         processed++;
                         UpdateProgress(processed, total);
                     }
                     catch (OperationCanceledException)
                     {
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosB);
-                        SetTableProgressStatus("Restore cancelado", targetB.Alias, tabela.NomeFisico);
                         throw;
                     }
                     catch (Exception ex)
@@ -2278,12 +2241,10 @@ ORDER BY TABLE_NAME;";
                         if (cancellationToken.IsCancellationRequested)
                         {
                             AddStatus(targetB.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosB);
-                            SetTableProgressStatus("Restore cancelado", targetB.Alias, tabela.NomeFisico);
                             throw new OperationCanceledException(cancellationToken);
                         }
 
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosB);
-                        SetTableProgressStatus("Falha no restore", targetB.Alias, tabela.NomeFisico);
                         errors++;
                         processed++;
                         UpdateProgress(processed, total);

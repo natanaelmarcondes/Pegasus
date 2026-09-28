@@ -1,4 +1,4 @@
-namespace Pegasus
+﻿namespace Pegasus
 {
     partial class Form1
     {
@@ -358,7 +358,7 @@ namespace Pegasus
             tableMain.Name = "tableMain";
             tableMain.RowCount = 1;
             tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableMain.Size = new Size(1076, 470);
+            tableMain.Size = new Size(1076, 439);
             tableMain.TabIndex = 4;
             // 
             // panelModulos

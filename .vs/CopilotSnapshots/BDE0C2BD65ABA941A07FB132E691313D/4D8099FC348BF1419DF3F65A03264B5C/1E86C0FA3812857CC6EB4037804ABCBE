@@ -1,4 +1,4 @@
-namespace Pegasus
+﻿namespace Pegasus
 {
     partial class Form1
     {
@@ -76,8 +76,6 @@ namespace Pegasus
             panelFooter = new Panel();
             progressMain = new ProgressBar();
             lblProgress = new Label();
-            progressTable = new ProgressBar();
-            lblTableProgress = new Label();
             btnSkipTable = new Button();
             btnRestore = new Button();
             btnBackup = new Button();
@@ -529,8 +527,6 @@ namespace Pegasus
             // 
             panelStatus.BackColor = Color.White;
             panelStatus.BorderStyle = BorderStyle.FixedSingle;
-            panelStatus.Controls.Add(progressTable);
-            panelStatus.Controls.Add(lblTableProgress);
             panelStatus.Controls.Add(dgvStatus);
             panelStatus.Controls.Add(lblStatus);
             panelStatus.Dock = DockStyle.Fill;
@@ -554,7 +550,7 @@ namespace Pegasus
             dgvStatus.ReadOnly = true;
             dgvStatus.RowHeadersVisible = false;
             dgvStatus.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvStatus.Size = new Size(405, 358);
+            dgvStatus.Size = new Size(405, 414);
             dgvStatus.TabIndex = 1;
             dgvStatus.CellPainting += dgvStatus_CellPainting;
             // 
@@ -589,27 +585,6 @@ namespace Pegasus
             lblStatus.Size = new Size(111, 15);
             lblStatus.TabIndex = 0;
             lblStatus.Text = "Status Operacional";
-            // 
-            // lblTableProgress
-            // 
-            lblTableProgress.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lblTableProgress.AutoEllipsis = true;
-            lblTableProgress.Font = new Font("Segoe UI", 8.25F, FontStyle.Bold);
-            lblTableProgress.ForeColor = Color.FromArgb(55, 65, 81);
-            lblTableProgress.Location = new Point(10, 406);
-            lblTableProgress.Name = "lblTableProgress";
-            lblTableProgress.Size = new Size(405, 18);
-            lblTableProgress.TabIndex = 2;
-            lblTableProgress.Text = "Progresso da tabela: aguardando operação";
-            // 
-            // progressTable
-            // 
-            progressTable.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            progressTable.Location = new Point(10, 430);
-            progressTable.Name = "progressTable";
-            progressTable.Size = new Size(405, 14);
-            progressTable.Style = ProgressBarStyle.Continuous;
-            progressTable.TabIndex = 3;
             // 
             // panelFooter
             // 
@@ -783,8 +758,6 @@ namespace Pegasus
         private Panel panelFooter;
         private ProgressBar progressMain;
         private Label lblProgress;
-        private ProgressBar progressTable;
-        private Label lblTableProgress;
         private Label lblMensagemOperacao;
         private Button btnSkipTable;
         private Button btnRestore;

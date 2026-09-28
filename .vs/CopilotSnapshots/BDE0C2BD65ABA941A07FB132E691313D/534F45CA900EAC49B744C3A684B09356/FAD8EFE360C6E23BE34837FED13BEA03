@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1876,7 +1876,6 @@ ORDER BY TABLE_NAME;";
 
             await using var command = new MySqlCommand(sql.ToString(), connection);
             await command.ExecuteNonQueryAsync(cancellationToken);
-            progressoLote(rows.Count);
         }
 
         private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql, CancellationToken cancellationToken)
