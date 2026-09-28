@@ -1,0 +1,242 @@
+﻿using System.Globalization;
+
+namespace Pegasus
+{
+    internal sealed class KeyIniConexaoService
+    {
+        private const string NomeArquivoIni = "KEY.INI";
+        private const string SecaoConfiguracao = "CONFIGURACAO";
+
+        private readonly IniService _iniService;
+        private readonly string _arquivoIni;
+        private readonly string? _prefixoForcado;
+        private string? _prefixoDetectado;
+
+        public KeyIniConexaoService(string arquivoIni = NomeArquivoIni, string? prefixoSistema = null, IniService? iniService = null)
+        {
+            _iniService = iniService ?? new IniService();
+            _arquivoIni = string.IsNullOrWhiteSpace(arquivoIni) ? NomeArquivoIni : arquivoIni;
+            _prefixoForcado = string.IsNullOrWhiteSpace(prefixoSistema)
+                ? null
+                : prefixoSistema.Trim()[0].ToString().ToUpperInvariant();
+        }
+
+        public IReadOnlyList<ConfiguracaoConexao> CarregarConexoes()
+        {
+            MPrc_GarantirPrefixoDetectado();
+            var lista = new List<ConfiguracaoConexao>();
+
+            for (var codigo = 0; codigo <= 99; codigo++)
+            {
+                var conexao = LerConfiguracaoConexao(codigo);
+                if (conexao is not null)
+                {
+                    lista.Add(conexao);
+                }
+            }
+
+            return lista;
+        }
+
+        public ConfiguracaoConexao? LerConfiguracaoConexao(int codigo)
+        {
+            if (codigo < 0 || codigo > 99)
+            {
+                throw new ArgumentOutOfRangeException(nameof(codigo), "Código da conexão deve estar entre 0 e 99.");
+            }
+
+            MPrc_GarantirPrefixoDetectado();
+            var sufixo = MFcn_ObterSufixoConexao(codigo);
+
+            var servidorA = MFcn_LerValorCampo("CNF03", sufixo);
+            if (string.IsNullOrWhiteSpace(servidorA))
+            {
+                return null;
+            }
+
+            var nome = MFcn_LerValorCampo("CNF00", sufixo);
+            if (string.IsNullOrWhiteSpace(nome))
+            {
+                nome = $"Conexão {codigo}";
+            }
+
+            var bancoA = LerConfiguracaoBancoA(codigo);
+            var bancoB = LerConfiguracaoBancoB(codigo);
+
+            return new ConfiguracaoConexao(codigo, nome, bancoA, bancoB);
+        }
+
+        public ConfiguracaoBanco LerConfiguracaoBancoA(int codigo)
+        {
+            var sufixo = MFcn_ObterSufixoConexao(codigo);
+
+            var tipoServidor = MFcn_LerValorCampo("CNF01", sufixo);
+            var driver = MFcn_LerValorCampo("CNF02", sufixo);
+            var servidor = MFcn_LerValorCampo("CNF03", sufixo);
+            var database = MFcn_LerValorCampo("CNF04", sufixo);
+            var usuario = MFcn_LerValorCampo("CNF05", sufixo);
+            var senha = MFcn_LerValorCampo("CNF06", sufixo);
+            var timeout = MFcn_LerUIntComFallback(new[] { "ITOUT1" }, sufixo, 15);
+            var porta = MFcn_LerPortaBanco('A', sufixo);
+
+            var banco = new ConfiguracaoBanco(
+                tipoServidor,
+                driver,
+                servidor,
+                porta,
+                database,
+                usuario,
+                senha,
+                timeout,
+                string.Empty);
+
+            return banco with { StringConexao = MontarStringConexao(banco) };
+        }
+
+        public ConfiguracaoBanco LerConfiguracaoBancoB(int codigo)
+        {
+            var sufixo = MFcn_ObterSufixoConexao(codigo);
+
+            var tipoServidor = MFcn_LerValorCampo("CNF07", sufixo);
+            var driver = MFcn_LerValorCampo("CNF08", sufixo);
+            var servidor = MFcn_LerValorCampo("CNF09", sufixo);
+            var database = MFcn_LerValorCampo("CNF10", sufixo);
+            var usuario = MFcn_LerValorCampo("CNF11", sufixo);
+            var senha = MFcn_LerValorCampo("CNF12", sufixo);
+            var timeout = MFcn_LerUIntComFallback(new[] { "ITOUT2" }, sufixo, 15);
+            var porta = MFcn_LerPortaBanco('B', sufixo);
+
+            var banco = new ConfiguracaoBanco(
+                tipoServidor,
+                driver,
+                servidor,
+                porta,
+                database,
+                usuario,
+                senha,
+                timeout,
+                string.Empty);
+
+            return banco with { StringConexao = MontarStringConexao(banco) };
+        }
+
+        public string MontarStringConexao(ConfiguracaoBanco banco)
+        {
+            var tipo = banco.TipoServidor?.Trim() ?? string.Empty;
+            var driver = banco.Driver?.Trim() ?? string.Empty;
+            var database = banco.Database?.Trim() ?? string.Empty;
+            var servidor = banco.Servidor?.Trim() ?? string.Empty;
+            var usuario = banco.Usuario?.Trim() ?? string.Empty;
+            var senha = banco.Senha ?? string.Empty;
+            var timeout = banco.Timeout == 0 ? 15 : banco.Timeout;
+            var porta = banco.Porta == 0 ? 3306u : banco.Porta;
+
+            var usaSqlServer = tipo.Contains("sql", StringComparison.OrdinalIgnoreCase)
+                || driver.Contains("sql", StringComparison.OrdinalIgnoreCase);
+
+            if (usaSqlServer)
+            {
+                var dataSource = porta > 0 ? $"{servidor},{porta}" : servidor;
+                return $"Data Source={dataSource};Initial Catalog={database};User ID={usuario};Password={senha};Connect Timeout={timeout};";
+            }
+
+            return $"Server={servidor};Port={porta};Database={database};User ID={usuario};Password={senha};Connection Timeout={timeout};Default Command Timeout={timeout};";
+        }
+
+        private void MPrc_GarantirPrefixoDetectado()
+        {
+            if (_prefixoDetectado is not null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_prefixoForcado))
+            {
+                _prefixoDetectado = _prefixoForcado;
+                return;
+            }
+
+            var candidatos = new List<string> { string.Empty };
+            for (var letra = 'A'; letra <= 'Z'; letra++)
+            {
+                candidatos.Add(letra.ToString());
+            }
+
+            var melhorPrefixo = string.Empty;
+            var melhorPontuacao = -1;
+
+            foreach (var candidato in candidatos)
+            {
+                var pontuacao = 0;
+                for (var codigo = 0; codigo <= 99; codigo++)
+                {
+                    var sufixo = MFcn_ObterSufixoConexao(codigo);
+                    var valor = MFcn_LerCampoComPrefixo("CNF03", sufixo, candidato);
+                    if (!string.IsNullOrWhiteSpace(valor))
+                    {
+                        pontuacao++;
+                    }
+                }
+
+                if (pontuacao > melhorPontuacao || (pontuacao == melhorPontuacao && candidato.Length > melhorPrefixo.Length))
+                {
+                    melhorPontuacao = pontuacao;
+                    melhorPrefixo = candidato;
+                }
+            }
+
+            _prefixoDetectado = melhorPrefixo;
+        }
+
+        private string MFcn_LerValorCampo(string baseCampo, string sufixo)
+        {
+            MPrc_GarantirPrefixoDetectado();
+            var valorComPrefixo = MFcn_LerCampoComPrefixo(baseCampo, sufixo, _prefixoDetectado ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(valorComPrefixo))
+            {
+                return valorComPrefixo;
+            }
+
+            if (string.IsNullOrWhiteSpace(_prefixoDetectado))
+            {
+                return string.Empty;
+            }
+
+            return MFcn_LerCampoComPrefixo(baseCampo, sufixo, string.Empty);
+        }
+
+        private string MFcn_LerCampoComPrefixo(string baseCampo, string sufixo, string prefixo)
+        {
+            var identificador = string.Concat(prefixo, baseCampo, sufixo);
+            return _iniService.Ler(identificador, 255, _arquivoIni, SecaoConfiguracao, string.Empty, true);
+        }
+
+        private uint MFcn_LerPortaBanco(char banco, string sufixo)
+        {
+            var chaves = banco == 'A'
+                ? new[] { "PORTA1", "PORT1", "PORTAB1", "PORT", "CNF13" }
+                : new[] { "PORTA2", "PORT2", "PORTAB2", "PORT", "CNF14" };
+
+            return MFcn_LerUIntComFallback(chaves, sufixo, 3306);
+        }
+
+        private uint MFcn_LerUIntComFallback(IEnumerable<string> baseCampos, string sufixo, uint padrao)
+        {
+            foreach (var campo in baseCampos)
+            {
+                var texto = MFcn_LerValorCampo(campo, sufixo);
+                if (uint.TryParse(texto, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor) && valor > 0)
+                {
+                    return valor;
+                }
+            }
+
+            return padrao;
+        }
+
+        private static string MFcn_ObterSufixoConexao(int codigo)
+        {
+            return codigo == 0 ? string.Empty : codigo.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+}

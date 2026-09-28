@@ -1,0 +1,27 @@
+﻿namespace Pegasus
+{
+    internal static class ConfiguracaoRuntime
+    {
+        public static string DiretorioConfigIni { get; set; } = string.Empty;
+
+        public static void AplicarArgumentos(string[] args)
+        {
+            if (args is null || args.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var argumento in args)
+            {
+                if (!argumento.StartsWith("/INI:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var diretorio = argumento[5..].Trim().Trim('"');
+                DiretorioConfigIni = diretorio;
+                break;
+            }
+        }
+    }
+}

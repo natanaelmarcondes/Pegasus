@@ -207,6 +207,8 @@ namespace Pegasus
             // chkIgnorarBackup
             // 
             chkIgnorarBackup.AutoSize = true;
+            chkIgnorarBackup.Checked = true;
+            chkIgnorarBackup.CheckState = CheckState.Checked;
             chkIgnorarBackup.Location = new Point(686, 46);
             chkIgnorarBackup.Name = "chkIgnorarBackup";
             chkIgnorarBackup.Size = new Size(65, 19);
@@ -217,6 +219,8 @@ namespace Pegasus
             // chkIgnorarTemp
             // 
             chkIgnorarTemp.AutoSize = true;
+            chkIgnorarTemp.Checked = true;
+            chkIgnorarTemp.CheckState = CheckState.Checked;
             chkIgnorarTemp.Location = new Point(590, 46);
             chkIgnorarTemp.Name = "chkIgnorarTemp";
             chkIgnorarTemp.Size = new Size(90, 19);
@@ -227,6 +231,8 @@ namespace Pegasus
             // chkIgnorarCep
             // 
             chkIgnorarCep.AutoSize = true;
+            chkIgnorarCep.Checked = true;
+            chkIgnorarCep.CheckState = CheckState.Checked;
             chkIgnorarCep.Location = new Point(537, 46);
             chkIgnorarCep.Name = "chkIgnorarCep";
             chkIgnorarCep.Size = new Size(47, 19);
@@ -237,6 +243,8 @@ namespace Pegasus
             // chkIgnorarLog
             // 
             chkIgnorarLog.AutoSize = true;
+            chkIgnorarLog.Checked = true;
+            chkIgnorarLog.CheckState = CheckState.Checked;
             chkIgnorarLog.Location = new Point(477, 46);
             chkIgnorarLog.Name = "chkIgnorarLog";
             chkIgnorarLog.Size = new Size(54, 19);
@@ -247,6 +255,8 @@ namespace Pegasus
             // chkIgnorarVazias
             // 
             chkIgnorarVazias.AutoSize = true;
+            chkIgnorarVazias.Checked = true;
+            chkIgnorarVazias.CheckState = CheckState.Checked;
             chkIgnorarVazias.Location = new Point(414, 46);
             chkIgnorarVazias.Name = "chkIgnorarVazias";
             chkIgnorarVazias.Size = new Size(57, 19);
@@ -551,7 +561,7 @@ namespace Pegasus
             colStatusTabela.HeaderText = "Tabela";
             colStatusTabela.Name = "colStatusTabela";
             colStatusTabela.ReadOnly = true;
-            colStatusTabela.Width = 205;
+            colStatusTabela.Width = 190;
             // 
             // colStatusEtapa
             // 
@@ -565,7 +575,7 @@ namespace Pegasus
             colStatusRegistros.HeaderText = "Qtd.";
             colStatusRegistros.Name = "colStatusRegistros";
             colStatusRegistros.ReadOnly = true;
-            colStatusRegistros.Width = 55;
+            colStatusRegistros.Width = 70;
             // 
             // lblStatus
             // 
@@ -656,7 +666,7 @@ namespace Pegasus
             // 
             // lblMensagemOperacao
             // 
-            lblMensagemOperacao.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblMensagemOperacao.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             lblMensagemOperacao.AutoEllipsis = true;
             lblMensagemOperacao.Font = new Font("Segoe UI", 9F);
             lblMensagemOperacao.ForeColor = Color.FromArgb(55, 65, 81);

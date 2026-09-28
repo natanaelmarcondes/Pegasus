@@ -1,0 +1,190 @@
+﻿using System.Runtime.InteropServices;
+using System.Text;
+
+namespace Pegasus
+{
+    internal sealed class IniService
+    {
+        private const int BufferPadrao = 32767;
+
+        public string Ler(
+            string identificador,
+            int tamanho,
+            string arquivoIni,
+            string secao,
+            string valorPadrao = "",
+            bool tirarEspacos = true)
+        {
+            var caminhoIni = ObterCaminhoIni(arquivoIni);
+            var valorCriptografado = MFcn_LerValorBruto(secao, identificador, caminhoIni).Replace("\0", string.Empty, StringComparison.Ordinal);
+
+            string retorno;
+            if (!string.IsNullOrEmpty(valorCriptografado))
+            {
+                var valorComTamanho = tamanho > 0 && valorCriptografado.Length < tamanho
+                    ? valorCriptografado.PadLeft(tamanho, ' ')
+                    : valorCriptografado;
+
+                retorno = MFcn_Criptografia(valorComTamanho, "L");
+            }
+            else
+            {
+                retorno = valorPadrao ?? string.Empty;
+            }
+
+            return tirarEspacos ? retorno.Trim() : retorno;
+        }
+
+        public bool Gravar(string identificador, int tamanho, string arquivoIni, string secao, string valor)
+        {
+            var caminhoIni = ObterCaminhoIni(arquivoIni);
+            var valorBase = valor ?? string.Empty;
+            var valorComTamanho = tamanho > 0 && valorBase.Length < tamanho
+                ? valorBase.PadRight(tamanho, ' ')
+                : valorBase;
+
+            var valorCriptografado = MFcn_Criptografia(valorComTamanho, "G");
+            var resultado = WritePrivateProfileString(secao, identificador, valorCriptografado, caminhoIni);
+            if (!resultado)
+            {
+                var erro = Marshal.GetLastWin32Error();
+                throw new InvalidOperationException($"Falha ao gravar no arquivo INI '{caminhoIni}'. Código Win32: {erro}.");
+            }
+
+            return true;
+        }
+
+        public string ObterCaminhoIni(string arquivoIni)
+        {
+            if (string.IsNullOrWhiteSpace(arquivoIni))
+            {
+                throw new ArgumentException("Nome do arquivo INI inválido.", nameof(arquivoIni));
+            }
+
+            if (arquivoIni.Contains(':', StringComparison.Ordinal) || arquivoIni.Contains('\\', StringComparison.Ordinal))
+            {
+                return arquivoIni;
+            }
+
+            var diretorioConfig = ConfiguracaoRuntime.DiretorioConfigIni;
+            if (string.IsNullOrWhiteSpace(diretorioConfig))
+            {
+                return arquivoIni;
+            }
+
+            if (diretorioConfig.EndsWith(':') || diretorioConfig.EndsWith('\\'))
+            {
+                return string.Concat(diretorioConfig, arquivoIni);
+            }
+
+            return string.Concat(diretorioConfig, "\\", arquivoIni);
+        }
+
+        private static string MFcn_LerValorBruto(string secao, string chave, string caminhoIni)
+        {
+            var buffer = new StringBuilder(BufferPadrao);
+            _ = GetPrivateProfileString(secao, chave, string.Empty, buffer, buffer.Capacity, caminhoIni);
+            return buffer.ToString();
+        }
+
+        private static string MFcn_Criptografia(string informacao, string tipo)
+        {
+            var tipoOperacao = (tipo ?? string.Empty).Trim().ToUpperInvariant();
+            var tabO = MFcn_ConstruirTabelaOriginal();
+            var tabN = MFcn_ConstruirTabelaCriptografada();
+
+            if (tabO.Contains('\'', StringComparison.Ordinal))
+            {
+                tabO = MFcn_RemoverPrimeiraOcorrencia(tabO, '\'');
+                tabN = MFcn_RemoverPrimeiraOcorrencia(tabN, '\'');
+            }
+
+            if (tipoOperacao == "C")
+            {
+                foreach (var caractere in informacao)
+                {
+                    var codigo = caractere;
+                    if (codigo < 32 || codigo > 126)
+                    {
+                        return bool.FalseString;
+                    }
+                }
+
+                return bool.TrueString;
+            }
+
+            var saida = new StringBuilder(informacao.Length);
+            foreach (var caractere in informacao)
+            {
+                var atual = caractere.ToString();
+                if (tipoOperacao == "L")
+                {
+                    var indice = tabN.IndexOf(atual, StringComparison.Ordinal);
+                    saida.Append(indice < 0 ? atual : tabO[indice]);
+                }
+                else
+                {
+                    var indice = tabO.IndexOf(atual, StringComparison.Ordinal);
+                    saida.Append(indice < 0 ? atual : tabN[indice]);
+                }
+            }
+
+            return saida.ToString();
+        }
+
+        private static string MFcn_ConstruirTabelaOriginal()
+        {
+            var baseTabela = "¹²³€ƒ„ßøþÞ¾½¼¶µ±®©¥¤Ÿœ™ŒŠ‰‡†…¨´`º£¢°ª§¿\u009DöÖäÄëËïÏçÇñÑãÃâÂáÁàÀêÊéÉèÈìÌíÍòÒõÕôÔóÓùÙüÜúÚ";
+            var builder = new StringBuilder(baseTabela);
+            for (var i = 32; i <= 126; i++)
+            {
+                builder.Append((char)i);
+            }
+
+            return builder.ToString();
+        }
+
+        private static string MFcn_ConstruirTabelaCriptografada()
+        {
+            var inicio = "©¥¤Ÿœ™ŒŠ‰‡†…ßøþÞ¾½¼¶µ±®¹²³€ƒ„´`¨ªº°£¢¿\u009D§ïÏëËäÄöÖ";
+            var fim = "çÇñÑãÃâÂáÁàÀêÊéÉèÈìÌíÍòÒõÕôÔóÓùÙüÜúÚ";
+
+            var builder = new StringBuilder(inicio);
+            for (var i = 126; i >= 32; i--)
+            {
+                builder.Append((char)i);
+            }
+
+            builder.Append(fim);
+            return builder.ToString();
+        }
+
+        private static string MFcn_RemoverPrimeiraOcorrencia(string texto, char caractere)
+        {
+            var indice = texto.IndexOf(caractere, StringComparison.Ordinal);
+            if (indice < 0)
+            {
+                return texto;
+            }
+
+            return string.Concat(texto.AsSpan(0, indice), texto.AsSpan(indice + 1));
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetPrivateProfileString(
+            string lpAppName,
+            string lpKeyName,
+            string lpDefault,
+            StringBuilder lpReturnedString,
+            int nSize,
+            string lpFileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool WritePrivateProfileString(
+            string lpAppName,
+            string lpKeyName,
+            string lpString,
+            string lpFileName);
+    }
+}

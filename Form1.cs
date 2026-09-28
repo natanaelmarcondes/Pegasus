@@ -37,6 +37,7 @@ namespace Pegasus
         private readonly Dictionary<string, KeyTabelaMetadata> _wmMetadataKeyTabelas = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<WMTbl_Tabela> WMTbl_Tabelas = new();
         private readonly Dictionary<string, int> _wmStatusRowByChave = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IniService _iniService = new();
         private BancoConfiguracao? _configBancoA;
         private BancoConfiguracao? _configBancoB;
         private CancellationTokenSource? _backupCancellation;
@@ -47,8 +48,12 @@ namespace Pegasus
         private int _ultimoIndiceModulo = -1;
         private char? _ultimaTeclaTabela;
         private int _ultimoIndiceTabela = -1;
+        private bool _formatandoPeriodo;
+        private bool _carregandoCaminhoBackup;
         private const int KeyBackupVersao = 3;
-        private const int RestoreBatchMaxRows = 500;
+        private const int RestoreBatchMaxRows = 2000;
+        private const string SecaoConfiguracaoIni = "CONFIGURACAO";
+        private const string ChaveUltimoDiretorioBackupRestore = "LASTBKP";
 
         public Form1()
         {
@@ -64,9 +69,46 @@ namespace Pegasus
             }
 
             MPrc_InicializarTela();
-            txtBackupBasePath.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsGDRW");
+            MPrc_CarregarUltimoDiretorioBackupRestore();
             Log("Conexões carregadas da configuração inicial. Clique em Carregar Tabelas.");
             UpdateProgress(0, 0);
+        }
+
+        private void MPrc_CarregarUltimoDiretorioBackupRestore()
+        {
+            var valorPadrao = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsGDRW");
+            _carregandoCaminhoBackup = true;
+            try
+            {
+                var chave = MFcn_ObterChaveUltimoDiretorioBackupRestore();
+                var caminho = _iniService.Ler(chave, 260, "KEY.INI", SecaoConfiguracaoIni, valorPadrao, true);
+                txtBackupBasePath.Text = string.IsNullOrWhiteSpace(caminho) ? valorPadrao : caminho;
+            }
+            finally
+            {
+                _carregandoCaminhoBackup = false;
+            }
+        }
+
+        private void MPrc_SalvarUltimoDiretorioBackupRestore(string caminho)
+        {
+            if (_carregandoCaminhoBackup || string.IsNullOrWhiteSpace(caminho))
+            {
+                return;
+            }
+
+            var chave = MFcn_ObterChaveUltimoDiretorioBackupRestore();
+            _ = _iniService.Gravar(chave, 260, "KEY.INI", SecaoConfiguracaoIni, caminho.Trim());
+        }
+
+        private static string MFcn_ObterChaveUltimoDiretorioBackupRestore()
+        {
+            var tipoSistema = ConfiguracaoRuntime.TipoSistema;
+            var prefixo = string.IsNullOrWhiteSpace(tipoSistema)
+                ? "I"
+                : tipoSistema.Trim()[0].ToString().ToUpperInvariant();
+
+            return string.Concat(prefixo, ChaveUltimoDiretorioBackupRestore);
         }
 
         private bool MPrc_AbrirConfiguracaoInicial()
@@ -85,6 +127,7 @@ namespace Pegasus
 
         private void MPrc_InicializarTela()
         {
+            KeyPreview = true;
             tableMain.ColumnStyles[0].Width = 18F;
             tableMain.ColumnStyles[1].Width = 42F;
             tableMain.ColumnStyles[2].Width = 40F;
@@ -92,9 +135,40 @@ namespace Pegasus
             MPrc_EstiloGridModerno(dgvTablesA);
             MPrc_EstiloGridModerno(dgvStatus);
             MPrc_DefinirPeriodoPadrao();
+            txt_PeriodoInicial.MaxLength = 7;
+            txt_PeriodoFinal.MaxLength = 7;
+            txt_PeriodoInicial.TextChanged += txt_PeriodoFinal_TextChanged;
             lblTablesA.Text = "Tabelas";
             dgvTablesA.SortCompare += dgvTablesA_SortCompare;
             MPrc_AplicarModoOperacao(false);
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Enter)
+            {
+                var controleAtivo = MFcn_ObterControleAtivo(this);
+                if (controleAtivo is not null
+                    && controleAtivo is not Button
+                    && controleAtivo is not DataGridView
+                    && (controleAtivo is not TextBox textBox || !textBox.Multiline))
+                {
+                    SelectNextControl(controleAtivo, true, true, true, true);
+                    return true;
+                }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private static Control? MFcn_ObterControleAtivo(Control? controle)
+        {
+            if (controle is ContainerControl container && container.ActiveControl is not null)
+            {
+                return MFcn_ObterControleAtivo(container.ActiveControl);
+            }
+
+            return controle;
         }
 
         private void MPrc_DefinirPeriodoPadrao()
@@ -1755,6 +1829,61 @@ ORDER BY TABLE_NAME;";
             var batchBytes = 0;
 
             using var reader = new StreamReader(filePath, Encoding.UTF8, true);
+            string? currentInsertTable = null;
+            var dataSessionInitialized = false;
+            async Task InitializeDataSessionAsync()
+            {
+                if (dataSessionInitialized) return;
+                // Disable checks and start transaction to speed up bulk inserts
+                await using var initCmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0; SET UNIQUE_CHECKS=0; SET AUTOCOMMIT=0; START TRANSACTION;", connection);
+                await initCmd.ExecuteNonQueryAsync();
+                dataSessionInitialized = true;
+            }
+
+            async Task CleanupDataSessionAsync()
+            {
+                // Enable checks and commit
+                try
+                {
+                    await using var commitCmd = new MySqlCommand("COMMIT; SET AUTOCOMMIT=1; SET FOREIGN_KEY_CHECKS=1; SET UNIQUE_CHECKS=1;", connection);
+                    await commitCmd.ExecuteNonQueryAsync();
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            async Task TryEnableKeysAsync(string? table)
+            {
+                if (string.IsNullOrWhiteSpace(table)) return;
+                try
+                {
+                    var escaped = table.Replace("`", "``", StringComparison.Ordinal);
+                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` ENABLE KEYS;", connection);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch
+                {
+                    // ignore if not supported for storage engine
+                }
+            }
+
+            async Task TryDisableKeysAsync(string? table)
+            {
+                if (string.IsNullOrWhiteSpace(table)) return;
+                try
+                {
+                    var escaped = table.Replace("`", "``", StringComparison.Ordinal);
+                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` DISABLE KEYS;", connection);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch
+                {
+                    // ignore if not supported for storage engine
+                }
+            }
+
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync() ?? string.Empty;
@@ -1781,6 +1910,9 @@ ORDER BY TABLE_NAME;";
                         await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql);
                     }
 
+                    // initialize session-level performance optimizations once per file
+                    await InitializeDataSessionAsync();
+
                     continue;
                 }
 
@@ -1806,7 +1938,37 @@ ORDER BY TABLE_NAME;";
 
                 if (trim.StartsWith("insert into", StringComparison.OrdinalIgnoreCase))
                 {
+                    // New insert block: detect table name and try to disable keys for faster bulk load
+                    // enable data session if not already
+                    await InitializeDataSessionAsync();
+
+                    // extract table identifier from insert prefix
                     insertPrefix = trim;
+                    string? newTable = null;
+                    try
+                    {
+                        var after = insertPrefix.Substring(insertPrefix.IndexOf("into", StringComparison.OrdinalIgnoreCase) + 4).TrimStart();
+                        var uptoParenIdx = after.IndexOf('(');
+                        var upto = uptoParenIdx >= 0 ? after.Substring(0, uptoParenIdx) : after;
+                        upto = upto.Trim();
+                        // remove column list if present, then get last part after dot (schema.table)
+                        var parts = upto.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                        var last = parts.Length > 0 ? parts[parts.Length - 1] : upto;
+                        newTable = last.Trim().Trim('`', ' ');
+                    }
+                    catch
+                    {
+                        newTable = null;
+                    }
+
+                    // if switching tables, enable keys on previous
+                    if (!string.Equals(currentInsertTable, newTable, StringComparison.Ordinal))
+                    {
+                        await TryEnableKeysAsync(currentInsertTable);
+                        currentInsertTable = newTable;
+                        await TryDisableKeysAsync(currentInsertTable);
+                    }
+
                     dataRows.Clear();
                     batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
                     continue;
@@ -1821,6 +1983,9 @@ ORDER BY TABLE_NAME;";
 
                     dataRows.Clear();
                     batchBytes = 0;
+                    // finished a full insert block for current table - enable keys for it
+                    await TryEnableKeysAsync(currentInsertTable);
+                    currentInsertTable = null;
                     continue;
                 }
 
@@ -1856,7 +2021,13 @@ ORDER BY TABLE_NAME;";
             if (!string.IsNullOrWhiteSpace(insertPrefix) && dataRows.Count > 0)
             {
                 await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows);
+                // final table enable keys
+                await TryEnableKeysAsync(currentInsertTable);
+                currentInsertTable = null;
             }
+
+            // cleanup session-level changes
+            await CleanupDataSessionAsync();
         }
 
         private static string MFcn_NormalizarHexVazioEmLinha(string rowValue)
@@ -1922,7 +2093,50 @@ ORDER BY TABLE_NAME;";
 
         private void txt_PeriodoFinal_TextChanged(object sender, EventArgs e)
         {
+            if (_formatandoPeriodo || sender is not TextBox campoPeriodo)
+            {
+                return;
+            }
 
+            var textoFormatado = MFcn_FormatarPeriodoMesAno(campoPeriodo.Text);
+            if (campoPeriodo.Text.Equals(textoFormatado, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _formatandoPeriodo = true;
+            campoPeriodo.Text = textoFormatado;
+            campoPeriodo.SelectionStart = campoPeriodo.Text.Length;
+            _formatandoPeriodo = false;
+        }
+
+        private static string MFcn_FormatarPeriodoMesAno(string texto)
+        {
+            Span<char> digitos = stackalloc char[6];
+            var tamanho = 0;
+
+            foreach (var caractere in texto)
+            {
+                if (!char.IsDigit(caractere))
+                {
+                    continue;
+                }
+
+                if (tamanho >= digitos.Length)
+                {
+                    break;
+                }
+
+                digitos[tamanho] = caractere;
+                tamanho++;
+            }
+
+            if (tamanho <= 2)
+            {
+                return new string(digitos[..tamanho]);
+            }
+
+            return string.Concat(new string(digitos[..2]), "/", new string(digitos[2..tamanho]));
         }
 
         private void rbOperacao_CheckedChanged(object sender, EventArgs e)
@@ -1935,7 +2149,7 @@ ORDER BY TABLE_NAME;";
 
         private void txtBackupBasePath_TextChanged(object sender, EventArgs e)
         {
-
+            MPrc_SalvarUltimoDiretorioBackupRestore(txtBackupBasePath.Text);
         }
     }
 }
