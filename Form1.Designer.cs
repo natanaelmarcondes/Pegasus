@@ -325,7 +325,6 @@ namespace Pegasus
             txtBackupBasePath.Name = "txtBackupBasePath";
             txtBackupBasePath.Size = new Size(502, 23);
             txtBackupBasePath.TabIndex = 1;
-            txtBackupBasePath.TextChanged += txtBackupBasePath_TextChanged;
             // 
             // lblBackupBase
             // 

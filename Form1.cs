@@ -51,11 +51,10 @@ namespace Pegasus
         private char? _ultimaTeclaTabela;
         private int _ultimoIndiceTabela = -1;
         private bool _formatandoPeriodo;
-        private bool _carregandoCaminhoBackup;
         private const int KeyBackupVersao = 3;
         private const int RestoreBatchMaxRows = 2000;
-        private const string SecaoConfiguracaoIni = "CONFIGURACAO";
-        private const string ChaveUltimoDiretorioBackupRestore = "LASTBKP";
+        private const string SecaoConfiguracaoBackupRestore = "BackupRestore";
+        private const string ChaveUltimoDiretorio = "UltimoDiretorio";
 
         public Form1()
         {
@@ -79,6 +78,8 @@ namespace Pegasus
 
         private void Form1_FormClosing(object? sender, FormClosingEventArgs e)
         {
+            MPrc_SalvarUltimoDiretorioBackupRestore();
+
             if (_permitirFechamento || e.CloseReason != CloseReason.UserClosing)
             {
                 return;
@@ -108,39 +109,51 @@ namespace Pegasus
 
         private void MPrc_CarregarUltimoDiretorioBackupRestore()
         {
-            var valorPadrao = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "BackupsGDRW");
-            _carregandoCaminhoBackup = true;
+            txtBackupBasePath.Text = string.Empty;
             try
             {
-                var chave = MFcn_ObterChaveUltimoDiretorioBackupRestore();
-                var caminho = _iniService.Ler(chave, 260, "KEY.INI", SecaoConfiguracaoIni, valorPadrao, true);
-                txtBackupBasePath.Text = string.IsNullOrWhiteSpace(caminho) ? valorPadrao : caminho;
+                var caminho = Microsoft.VisualBasic.Interaction.GetSetting(
+                    ObterNomeAplicativoConfiguracao(),
+                    SecaoConfiguracaoBackupRestore,
+                    ChaveUltimoDiretorio,
+                    string.Empty).Trim();
+
+                if (caminho.Length > 0 && Directory.Exists(caminho))
+                {
+                    txtBackupBasePath.Text = caminho;
+                }
             }
-            finally
+            catch
             {
-                _carregandoCaminhoBackup = false;
             }
         }
 
-        private void MPrc_SalvarUltimoDiretorioBackupRestore(string caminho)
+        private void MPrc_SalvarUltimoDiretorioBackupRestore()
         {
-            if (_carregandoCaminhoBackup || string.IsNullOrWhiteSpace(caminho))
+            var caminho = txtBackupBasePath.Text.Trim();
+            if (caminho.Length == 0)
             {
                 return;
             }
 
-            var chave = MFcn_ObterChaveUltimoDiretorioBackupRestore();
-            _ = _iniService.Gravar(chave, 260, "KEY.INI", SecaoConfiguracaoIni, caminho.Trim());
+            try
+            {
+                Microsoft.VisualBasic.Interaction.SaveSetting(
+                    ObterNomeAplicativoConfiguracao(),
+                    SecaoConfiguracaoBackupRestore,
+                    ChaveUltimoDiretorio,
+                    caminho);
+            }
+            catch
+            {
+            }
         }
 
-        private static string MFcn_ObterChaveUltimoDiretorioBackupRestore()
+        private static string ObterNomeAplicativoConfiguracao()
         {
-            var tipoSistema = ConfiguracaoRuntime.TipoSistema;
-            var prefixo = string.IsNullOrWhiteSpace(tipoSistema)
-                ? "I"
-                : tipoSistema.Trim()[0].ToString().ToUpperInvariant();
-
-            return string.Concat(prefixo, ChaveUltimoDiretorioBackupRestore);
+            return string.IsNullOrWhiteSpace(Application.ProductName)
+                ? typeof(Form1).Assembly.GetName().Name ?? "Pegasus"
+                : Application.ProductName;
         }
 
         private bool MPrc_AbrirConfiguracaoInicial()
@@ -392,7 +405,7 @@ namespace Pegasus
 
             btnLoadTables.Enabled = !busy;
             btnBackup.Enabled = !busy;
-            btnRestore.Enabled = false;
+            btnRestore.Enabled = busy && _backupCancellation is not null;
             btnSkipTable.Enabled = false;
             btnChooseBackupFolder.Enabled = !busy && MFcn_OperacaoAtual() != OperacaoModo.Otimizar;
             btnSelectAllA.Enabled = !busy;
@@ -420,7 +433,11 @@ namespace Pegasus
 
         private void btnChooseBackupFolder_Click(object sender, EventArgs e)
         {
-            folderBrowserDialog.SelectedPath = txtBackupBasePath.Text;
+            var caminhoAtual = txtBackupBasePath.Text.Trim();
+            folderBrowserDialog.InitialDirectory = Directory.Exists(caminhoAtual)
+                ? Path.GetFullPath(caminhoAtual)
+                : string.Empty;
+            folderBrowserDialog.SelectedPath = caminhoAtual;
             if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
             {
                 txtBackupBasePath.Text = folderBrowserDialog.SelectedPath;
@@ -1293,25 +1310,17 @@ FROM KEY_TABELAS;";
 
             try
             {
+                _backupCancellation = new CancellationTokenSource();
                 SetBusy(true);
                 MPrc_ConfigurarModoBackup(true);
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalTables);
-                _backupCancellation = new CancellationTokenSource();
                 _pularTabelaSolicitado = false;
                 _chaveTabelaEmProcessamento = string.Empty;
 
                 var backupDirectory = BuildBackupDirectory();
                 Directory.CreateDirectory(backupDirectory);
-                _carregandoCaminhoBackup = true;
-                try
-                {
-                    txtBackupBasePath.Text = backupDirectory;
-                }
-                finally
-                {
-                    _carregandoCaminhoBackup = false;
-                }
+                txtBackupBasePath.Text = backupDirectory;
                 Log($"Gerando backup em: {backupDirectory}");
 
                 var processed = 0;
@@ -1361,11 +1370,14 @@ FROM KEY_TABELAS;";
 
             try
             {
+                _backupCancellation = new CancellationTokenSource();
                 SetBusy(true);
+                btnRestore.Enabled = true;
+                btnRestore.Text = "Cancelar Restore";
                 MPrc_LimparStatusOperacional();
                 UpdateProgress(0, totalArquivos);
 
-                var summary = await RestoreFilesAsync(targetA!, targetB!, selecionadas, 0, totalArquivos);
+                var summary = await RestoreFilesAsync(targetA!, targetB!, selecionadas, 0, totalArquivos, _backupCancellation.Token);
                 UpdateProgress(summary.Processed, totalArquivos);
 
                 if (summary.Errors > 0)
@@ -1379,6 +1391,11 @@ FROM KEY_TABELAS;";
                     MessageBox.Show("Restore concluído.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Log("Restore cancelado pelo usuário.");
+                MessageBox.Show("Restore cancelado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Falha no restore: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1386,7 +1403,10 @@ FROM KEY_TABELAS;";
             }
             finally
             {
+                _backupCancellation?.Dispose();
+                _backupCancellation = null;
                 SetBusy(false);
+                btnRestore.Text = "Cancelar Backup";
             }
         }
 
@@ -1457,13 +1477,15 @@ FROM KEY_TABELAS;";
 
         private void btnRestore_Click(object sender, EventArgs e)
         {
-            if (!_backupEmExecucao || _backupCancellation is null)
+            if (_backupCancellation is null || _backupCancellation.IsCancellationRequested)
             {
                 return;
             }
 
             _backupCancellation.Cancel();
-            Log("Solicitado cancelamento do backup.");
+            Log(MFcn_OperacaoAtual() == OperacaoModo.Restore
+                ? "Solicitado cancelamento do restore."
+                : "Solicitado cancelamento do backup.");
         }
 
         private async Task<List<TableInfo>> LoadTablesAsync(DbTarget target)
@@ -1758,15 +1780,15 @@ ORDER BY TABLE_NAME;";
             return reader.GetString(1);
         }
 
-        private static async Task<int> MFcn_ObterMaxAllowedPacketAsync(MySqlConnection connection)
+        private static async Task<int> MFcn_ObterMaxAllowedPacketAsync(MySqlConnection connection, CancellationToken cancellationToken)
         {
             await using var cmd = new MySqlCommand("SELECT @@max_allowed_packet;", connection);
-            var scalar = await cmd.ExecuteScalarAsync();
+            var scalar = await cmd.ExecuteScalarAsync(cancellationToken);
             var maxAllowed = Convert.ToInt32(scalar ?? 4194304, CultureInfo.InvariantCulture);
             return Math.Max(32768, maxAllowed - 8192);
         }
 
-        private static async Task MPrc_ExecutarInsertLoteAsync(MySqlConnection connection, string insertPrefix, IReadOnlyList<string> rows)
+        private static async Task MPrc_ExecutarInsertLoteAsync(MySqlConnection connection, string insertPrefix, IReadOnlyList<string> rows, CancellationToken cancellationToken)
         {
             if (rows.Count == 0)
             {
@@ -1780,10 +1802,10 @@ ORDER BY TABLE_NAME;";
             sql.Append(';');
 
             await using var command = new MySqlCommand(sql.ToString(), connection);
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql)
+        private static async Task MPrc_ExecutarEstruturaRestoreAsync(MySqlConnection connection, string structureSql, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(structureSql))
             {
@@ -1796,7 +1818,7 @@ ORDER BY TABLE_NAME;";
                 try
                 {
                     await using var structCommand = new MySqlCommand(sqlAtual, connection);
-                    await structCommand.ExecuteNonQueryAsync();
+                    await structCommand.ExecuteNonQueryAsync(cancellationToken);
                     return;
                 }
                 catch (MySqlException ex)
@@ -1817,7 +1839,7 @@ ORDER BY TABLE_NAME;";
             }
 
             await using var finalCommand = new MySqlCommand(sqlAtual, connection);
-            await finalCommand.ExecuteNonQueryAsync();
+            await finalCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
         private static bool MFcn_TentarExtrairColunaComDefaultInvalido(string mensagemErro, out string nomeColuna)
@@ -1861,9 +1883,9 @@ ORDER BY TABLE_NAME;";
                 RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private static async Task MPrc_RestaurarArquivoKeyBackupAsync(MySqlConnection connection, string filePath)
+        private static async Task MPrc_RestaurarArquivoKeyBackupAsync(MySqlConnection connection, string filePath, CancellationToken cancellationToken)
         {
-            var packetLimite = await MFcn_ObterMaxAllowedPacketAsync(connection);
+            var packetLimite = await MFcn_ObterMaxAllowedPacketAsync(connection, cancellationToken);
             var structureBuilder = new StringBuilder();
             var dataRows = new List<string>(RestoreBatchMaxRows);
             string? insertPrefix = null;
@@ -1878,16 +1900,17 @@ ORDER BY TABLE_NAME;";
                 if (dataSessionInitialized) return;
                 // Disable checks and start transaction to speed up bulk inserts
                 await using var initCmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0; SET UNIQUE_CHECKS=0; SET AUTOCOMMIT=0; START TRANSACTION;", connection);
-                await initCmd.ExecuteNonQueryAsync();
+                await initCmd.ExecuteNonQueryAsync(cancellationToken);
                 dataSessionInitialized = true;
             }
 
-            async Task CleanupDataSessionAsync()
+            async Task CleanupDataSessionAsync(bool rollback)
             {
-                // Enable checks and commit
+                // Restore connection settings and finish or roll back the current transaction
                 try
                 {
-                    await using var commitCmd = new MySqlCommand("COMMIT; SET AUTOCOMMIT=1; SET FOREIGN_KEY_CHECKS=1; SET UNIQUE_CHECKS=1;", connection);
+                    var finalizarTransacao = rollback ? "ROLLBACK;" : "COMMIT;";
+                    await using var commitCmd = new MySqlCommand($"{finalizarTransacao} SET AUTOCOMMIT=1; SET FOREIGN_KEY_CHECKS=1; SET UNIQUE_CHECKS=1;", connection);
                     await commitCmd.ExecuteNonQueryAsync();
                 }
                 catch
@@ -1903,7 +1926,11 @@ ORDER BY TABLE_NAME;";
                 {
                     var escaped = table.Replace("`", "``", StringComparison.Ordinal);
                     await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` ENABLE KEYS;", connection);
-                    await cmd.ExecuteNonQueryAsync();
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch
                 {
@@ -1918,7 +1945,11 @@ ORDER BY TABLE_NAME;";
                 {
                     var escaped = table.Replace("`", "``", StringComparison.Ordinal);
                     await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` DISABLE KEYS;", connection);
-                    await cmd.ExecuteNonQueryAsync();
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch
                 {
@@ -1926,9 +1957,12 @@ ORDER BY TABLE_NAME;";
                 }
             }
 
+            try
+            {
             while (!reader.EndOfStream)
             {
-                var line = await reader.ReadLineAsync() ?? string.Empty;
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync(cancellationToken) ?? string.Empty;
                 var trim = line.Trim();
 
                 if (trim.StartsWith("#KEYBACKUP|", StringComparison.OrdinalIgnoreCase))
@@ -1949,7 +1983,7 @@ ORDER BY TABLE_NAME;";
                     var structureSql = structureBuilder.ToString().Trim();
                     if (!string.IsNullOrWhiteSpace(structureSql))
                     {
-                        await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql);
+                        await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql, cancellationToken);
                     }
 
                     // initialize session-level performance optimizations once per file
@@ -2020,7 +2054,7 @@ ORDER BY TABLE_NAME;";
                 {
                     if (!string.IsNullOrWhiteSpace(insertPrefix))
                     {
-                        await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows);
+                        await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                     }
 
                     dataRows.Clear();
@@ -2051,7 +2085,7 @@ ORDER BY TABLE_NAME;";
                 var precisaEnviar = dataRows.Count >= RestoreBatchMaxRows || (batchBytes + rowBytes) >= packetLimite;
                 if (precisaEnviar)
                 {
-                    await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows);
+                    await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                     dataRows.Clear();
                     batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
                 }
@@ -2062,14 +2096,17 @@ ORDER BY TABLE_NAME;";
 
             if (!string.IsNullOrWhiteSpace(insertPrefix) && dataRows.Count > 0)
             {
-                await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows);
+                await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, cancellationToken);
                 // final table enable keys
                 await TryEnableKeysAsync(currentInsertTable);
                 currentInsertTable = null;
             }
 
-            // cleanup session-level changes
-            await CleanupDataSessionAsync();
+            }
+            finally
+            {
+                await CleanupDataSessionAsync(cancellationToken.IsCancellationRequested);
+            }
         }
 
         private static string MFcn_NormalizarHexVazioEmLinha(string rowValue)
@@ -2077,29 +2114,41 @@ ORDER BY TABLE_NAME;";
             return Regex.Replace(rowValue, "(^|[,(])0x(?=,|\\))", "$1X''", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private async Task<RestoreExecutionSummary> RestoreFilesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, int processed, int total)
+        private async Task<RestoreExecutionSummary> RestoreFilesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, int processed, int total, CancellationToken cancellationToken)
         {
             await using var connectionA = new MySqlConnection(BuildConnectionString(targetA));
             await using var connectionB = new MySqlConnection(BuildConnectionString(targetB));
-            await connectionA.OpenAsync();
-            await connectionB.OpenAsync();
+            await connectionA.OpenAsync(cancellationToken);
+            await connectionB.OpenAsync(cancellationToken);
             var errors = 0;
 
             foreach (var tabela in tabelas.OrderBy(x => x.NomeFisico, StringComparer.OrdinalIgnoreCase))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!string.IsNullOrWhiteSpace(tabela.ArquivoA))
                 {
                     try
                     {
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Restaurando", tabela.RegistrosA);
-                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionA, tabela.ArquivoA);
+                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionA, tabela.ArquivoA, cancellationToken);
 
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosA);
                         processed++;
                         UpdateProgress(processed, total);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        AddStatus(targetA.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosA);
+                        throw;
+                    }
                     catch (Exception ex)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            AddStatus(targetA.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosA);
+                            throw new OperationCanceledException(cancellationToken);
+                        }
+
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosA);
                         errors++;
                         processed++;
@@ -2113,14 +2162,25 @@ ORDER BY TABLE_NAME;";
                     try
                     {
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Restaurando", tabela.RegistrosB);
-                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionB, tabela.ArquivoB);
+                        await MPrc_RestaurarArquivoKeyBackupAsync(connectionB, tabela.ArquivoB, cancellationToken);
 
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Concluído", tabela.RegistrosB);
                         processed++;
                         UpdateProgress(processed, total);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        AddStatus(targetB.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosB);
+                        throw;
+                    }
                     catch (Exception ex)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            AddStatus(targetB.Alias, tabela.NomeFisico, "Cancelado", tabela.RegistrosB);
+                            throw new OperationCanceledException(cancellationToken);
+                        }
+
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosB);
                         errors++;
                         processed++;
@@ -2189,9 +2249,5 @@ ORDER BY TABLE_NAME;";
             }
         }
 
-        private void txtBackupBasePath_TextChanged(object sender, EventArgs e)
-        {
-            MPrc_SalvarUltimoDiretorioBackupRestore(txtBackupBasePath.Text);
-        }
     }
 }
