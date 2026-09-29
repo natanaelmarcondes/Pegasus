@@ -417,17 +417,39 @@ namespace Pegasus
         private void SetBusy(bool busy)
         {
             MPrc_DefinirUseWaitCursor(this, busy);
+
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            if (!busy)
+
+            if (busy)
             {
+                dgvModulos.Cursor = Cursors.WaitCursor;
+                dgvTablesA.Cursor = Cursors.WaitCursor;
+                dgvStatus.Cursor = Cursors.WaitCursor;
+            }
+            else
+            {
+                Cursor = Cursors.Default;
                 Cursor.Current = Cursors.Default;
+
+                dgvModulos.UseWaitCursor = false;
+                dgvTablesA.UseWaitCursor = false;
+                dgvStatus.UseWaitCursor = false;
+
+                dgvModulos.Cursor = Cursors.Default;
+                dgvTablesA.Cursor = Cursors.Default;
+                dgvStatus.Cursor = Cursors.Default;
+
+                dgvModulos.Refresh();
+                dgvTablesA.Refresh();
+                dgvStatus.Refresh();
             }
 
             btnLoadTables.Enabled = !busy;
             btnBackup.Enabled = !busy;
             btnRestore.Enabled = busy && _backupCancellation is not null;
             btnSkipTable.Enabled = false;
-            btnChooseBackupFolder.Enabled = !busy && MFcn_OperacaoAtual() != OperacaoModo.Otimizar;
+            btnChooseBackupFolder.Enabled =
+                !busy && MFcn_OperacaoAtual() != OperacaoModo.Otimizar;
             btnSelectAllA.Enabled = !busy;
             btnUnselectAllA.Enabled = !busy;
             btnSelectAllModulos.Enabled = !busy;
