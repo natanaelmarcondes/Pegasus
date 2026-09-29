@@ -171,7 +171,7 @@ namespace Pegasus
             _configBancoA = telaConfig.ConfigBancoA;
             _configBancoB = telaConfig.ConfigBancoB;
             _nomeConexaoSelecionada = telaConfig.NomeConexaoSelecionada;
-            
+
             return true;
         }
 
@@ -391,7 +391,14 @@ namespace Pegasus
                 ConnectionTimeout = 10,
                 DefaultCommandTimeout = 120,
                 AllowUserVariables = true,
-                ConvertZeroDateTime = true,
+
+                // Preserva datas zero existentes em bancos MySQL/MariaDB legados.
+                // Ex.: 0000-00-00 e 0000-00-00 00:00:00.
+                // ConvertZeroDateTime=true transformava esses valores em
+                // DateTime.MinValue (0001-01-01), alterando o conteúdo do backup.
+                AllowZeroDateTime = true,
+                ConvertZeroDateTime = false,
+
                 GuidFormat = MySqlGuidFormat.None,
             };
 
@@ -1851,9 +1858,29 @@ WHERE TABLE_SCHEMA = @db
 
         private static string MFcn_FormatarValorBackup(object? value)
         {
+            // NULL deve continuar sendo NULL no arquivo de backup.
             if (value is null || value == DBNull.Value)
             {
                 return "NULL";
+            }
+
+            // MySQL/MariaDB permitem datas zero, mas System.DateTime não.
+            // Com AllowZeroDateTime=true e ConvertZeroDateTime=false o
+            // MySqlConnector devolve MySqlDateTime, preservando o valor original.
+            if (value is MySqlDateTime mysqlDateTime)
+            {
+                if (!mysqlDateTime.IsValidDateTime)
+                {
+                    // Preserva exatamente valores como:
+                    // 0000-00-00
+                    // 0000-00-00 00:00:00
+                    return MFcn_ConverterTextoParaHex(mysqlDateTime.ToString());
+                }
+
+                return MFcn_ConverterTextoParaHex(
+                    mysqlDateTime
+                        .GetDateTime()
+                        .ToString("yyyy-MM-dd HH:mm:ss.ffffff", CultureInfo.InvariantCulture));
             }
 
             return value switch
@@ -2109,148 +2136,148 @@ WHERE TABLE_SCHEMA = @db
 
             try
             {
-            while (!reader.EndOfStream)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellationToken) ?? string.Empty;
-                var trim = line.Trim();
-
-                if (trim.StartsWith("#KEYBACKUP|", StringComparison.OrdinalIgnoreCase))
+                while (!reader.EndOfStream)
                 {
-                    continue;
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var line = await reader.ReadLineAsync(cancellationToken) ?? string.Empty;
+                    var trim = line.Trim();
 
-                if (string.Equals(trim, "#STRUCTURE", StringComparison.OrdinalIgnoreCase))
-                {
-                    section = "STRUCTURE";
-                    continue;
-                }
-
-                if (string.Equals(trim, "#DATA", StringComparison.OrdinalIgnoreCase))
-                {
-                    section = "DATA";
-
-                    var structureSql = structureBuilder.ToString().Trim();
-                    if (!string.IsNullOrWhiteSpace(structureSql))
+                    if (trim.StartsWith("#KEYBACKUP|", StringComparison.OrdinalIgnoreCase))
                     {
-                        await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql, cancellationToken);
+                        continue;
                     }
 
-                    // initialize session-level performance optimizations once per file
-                    await InitializeDataSessionAsync();
-
-                    continue;
-                }
-
-                if (section == "STRUCTURE")
-                {
-                    if (!string.IsNullOrWhiteSpace(line))
+                    if (string.Equals(trim, "#STRUCTURE", StringComparison.OrdinalIgnoreCase))
                     {
-                        structureBuilder.AppendLine(line);
+                        section = "STRUCTURE";
+                        continue;
                     }
 
-                    continue;
-                }
-
-                if (section != "DATA")
-                {
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(trim))
-                {
-                    continue;
-                }
-
-                if (trim.StartsWith("insert into", StringComparison.OrdinalIgnoreCase))
-                {
-                    // New insert block: detect table name and try to disable keys for faster bulk load
-                    // enable data session if not already
-                    await InitializeDataSessionAsync();
-
-                    // extract table identifier from insert prefix
-                    insertPrefix = trim;
-                    string? newTable = null;
-                    try
+                    if (string.Equals(trim, "#DATA", StringComparison.OrdinalIgnoreCase))
                     {
-                        var after = insertPrefix.Substring(insertPrefix.IndexOf("into", StringComparison.OrdinalIgnoreCase) + 4).TrimStart();
-                        var uptoParenIdx = after.IndexOf('(');
-                        var upto = uptoParenIdx >= 0 ? after.Substring(0, uptoParenIdx) : after;
-                        upto = upto.Trim();
-                        // remove column list if present, then get last part after dot (schema.table)
-                        var parts = upto.Split('.', StringSplitOptions.RemoveEmptyEntries);
-                        var last = parts.Length > 0 ? parts[parts.Length - 1] : upto;
-                        newTable = last.Trim().Trim('`', ' ');
-                    }
-                    catch
-                    {
-                        newTable = null;
+                        section = "DATA";
+
+                        var structureSql = structureBuilder.ToString().Trim();
+                        if (!string.IsNullOrWhiteSpace(structureSql))
+                        {
+                            await MPrc_ExecutarEstruturaRestoreAsync(connection, structureSql, cancellationToken);
+                        }
+
+                        // initialize session-level performance optimizations once per file
+                        await InitializeDataSessionAsync();
+
+                        continue;
                     }
 
-                    // if switching tables, enable keys on previous
-                    if (!string.Equals(currentInsertTable, newTable, StringComparison.Ordinal))
+                    if (section == "STRUCTURE")
                     {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            structureBuilder.AppendLine(line);
+                        }
+
+                        continue;
+                    }
+
+                    if (section != "DATA")
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(trim))
+                    {
+                        continue;
+                    }
+
+                    if (trim.StartsWith("insert into", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // New insert block: detect table name and try to disable keys for faster bulk load
+                        // enable data session if not already
+                        await InitializeDataSessionAsync();
+
+                        // extract table identifier from insert prefix
+                        insertPrefix = trim;
+                        string? newTable = null;
+                        try
+                        {
+                            var after = insertPrefix.Substring(insertPrefix.IndexOf("into", StringComparison.OrdinalIgnoreCase) + 4).TrimStart();
+                            var uptoParenIdx = after.IndexOf('(');
+                            var upto = uptoParenIdx >= 0 ? after.Substring(0, uptoParenIdx) : after;
+                            upto = upto.Trim();
+                            // remove column list if present, then get last part after dot (schema.table)
+                            var parts = upto.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                            var last = parts.Length > 0 ? parts[parts.Length - 1] : upto;
+                            newTable = last.Trim().Trim('`', ' ');
+                        }
+                        catch
+                        {
+                            newTable = null;
+                        }
+
+                        // if switching tables, enable keys on previous
+                        if (!string.Equals(currentInsertTable, newTable, StringComparison.Ordinal))
+                        {
+                            await TryEnableKeysAsync(currentInsertTable);
+                            currentInsertTable = newTable;
+                            await TryDisableKeysAsync(currentInsertTable);
+                        }
+
+                        dataRows.Clear();
+                        batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
+                        continue;
+                    }
+
+                    if (trim == ";")
+                    {
+                        if (!string.IsNullOrWhiteSpace(insertPrefix))
+                        {
+                            await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
+                        }
+
+                        dataRows.Clear();
+                        batchBytes = 0;
+                        // finished a full insert block for current table - enable keys for it
                         await TryEnableKeysAsync(currentInsertTable);
-                        currentInsertTable = newTable;
-                        await TryDisableKeysAsync(currentInsertTable);
+                        currentInsertTable = null;
+                        continue;
                     }
 
-                    dataRows.Clear();
-                    batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
-                    continue;
-                }
+                    if (string.IsNullOrWhiteSpace(insertPrefix))
+                    {
+                        continue;
+                    }
 
-                if (trim == ";")
-                {
-                    if (!string.IsNullOrWhiteSpace(insertPrefix))
+                    var rowValue = trim.StartsWith(",", StringComparison.Ordinal)
+                        ? trim[1..].TrimStart()
+                        : trim;
+
+                    rowValue = MFcn_NormalizarHexVazioEmLinha(rowValue);
+
+                    if (!rowValue.StartsWith("(", StringComparison.Ordinal) || !rowValue.EndsWith(")", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var rowBytes = Encoding.UTF8.GetByteCount(rowValue) + 4;
+                    var precisaEnviar = dataRows.Count >= RestoreBatchMaxRows || (batchBytes + rowBytes) >= packetLimite;
+                    if (precisaEnviar)
                     {
                         await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
+                        dataRows.Clear();
+                        batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
                     }
 
-                    dataRows.Clear();
-                    batchBytes = 0;
-                    // finished a full insert block for current table - enable keys for it
-                    await TryEnableKeysAsync(currentInsertTable);
-                    currentInsertTable = null;
-                    continue;
+                    dataRows.Add(rowValue);
+                    batchBytes += rowBytes;
                 }
 
-                if (string.IsNullOrWhiteSpace(insertPrefix))
-                {
-                    continue;
-                }
-
-                var rowValue = trim.StartsWith(",", StringComparison.Ordinal)
-                    ? trim[1..].TrimStart()
-                    : trim;
-
-                rowValue = MFcn_NormalizarHexVazioEmLinha(rowValue);
-
-                if (!rowValue.StartsWith("(", StringComparison.Ordinal) || !rowValue.EndsWith(")", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                var rowBytes = Encoding.UTF8.GetByteCount(rowValue) + 4;
-                var precisaEnviar = dataRows.Count >= RestoreBatchMaxRows || (batchBytes + rowBytes) >= packetLimite;
-                if (precisaEnviar)
+                if (!string.IsNullOrWhiteSpace(insertPrefix) && dataRows.Count > 0)
                 {
                     await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
-                    dataRows.Clear();
-                    batchBytes = Encoding.UTF8.GetByteCount(insertPrefix) + 8;
+                    // final table enable keys
+                    await TryEnableKeysAsync(currentInsertTable);
+                    currentInsertTable = null;
                 }
-
-                dataRows.Add(rowValue);
-                batchBytes += rowBytes;
-            }
-
-            if (!string.IsNullOrWhiteSpace(insertPrefix) && dataRows.Count > 0)
-            {
-                await MPrc_ExecutarInsertLoteAsync(connection, insertPrefix, dataRows, progressoLote, cancellationToken);
-                // final table enable keys
-                await TryEnableKeysAsync(currentInsertTable);
-                currentInsertTable = null;
-            }
 
             }
             finally
