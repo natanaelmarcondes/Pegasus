@@ -717,7 +717,7 @@ namespace Pegasus
             MinimumSize = new Size(1116, 714);
             Name = "Form1";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Kesystems - Backup/Restore";
+            Text = "Keysystems - Backup/Restore";
             Load += Form1_Load;
             FormClosing += Form1_FormClosing;
             panelHeader.ResumeLayout(false);

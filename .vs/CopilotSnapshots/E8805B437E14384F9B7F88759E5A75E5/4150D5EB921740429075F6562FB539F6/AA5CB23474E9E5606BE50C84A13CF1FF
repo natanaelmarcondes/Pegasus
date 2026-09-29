@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -186,23 +186,11 @@ namespace Pegasus
             MPrc_DefinirPeriodoPadrao();
             txt_PeriodoInicial.MaxLength = 7;
             txt_PeriodoFinal.MaxLength = 7;
-            txt_PeriodoInicial.KeyDown += AutoTab_KeyDown;
-            txt_PeriodoFinal.KeyDown += AutoTab_KeyDown;
-            txtBackupBasePath.KeyDown += AutoTab_KeyDown;
             txt_PeriodoInicial.TextChanged += txt_PeriodoFinal_TextChanged;
             lblTablesA.Text = "Tabelas";
             dgvTablesA.SortCompare += dgvTablesA_SortCompare;
             MPrc_AplicarModoOperacao(false);
             lblHeader.Text = $"Backup/Restore de Dados - {_nomeConexaoSelecionada}";
-        }
-
-        private void AutoTab_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;
-                SelectNextControl((Control)sender, true, true, true, true);
-            }
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -211,9 +199,6 @@ namespace Pegasus
             {
                 var controleAtivo = MFcn_ObterControleAtivo(this);
                 if (controleAtivo is not null
-                    && controleAtivo != txt_PeriodoInicial
-                    && controleAtivo != txt_PeriodoFinal
-                    && controleAtivo != txtBackupBasePath
                     && controleAtivo is not Button
                     && controleAtivo is not DataGridView
                     && (controleAtivo is not TextBox textBox || !textBox.Multiline))
@@ -1356,7 +1341,7 @@ FROM KEY_TABELAS;";
             }
 
             var selecionadas = MFcn_ObterTabelasSelecionadas();
-            var totalTables = selecionadas.Sum(x => (x.ExisteA ? 1 : 0) + (x.ExisteA && x.ExisteB ? 1 : 0));
+            var totalTables = selecionadas.Sum(x => (x.ExisteA ? 1 : 0) + (x.ExisteB ? 1 : 0));
 
             if (totalTables == 0)
             {
@@ -1598,7 +1583,7 @@ ORDER BY TABLE_NAME;";
                     sequencia++;
                 }
 
-                if (tabela.ExisteA && tabela.ExisteB)
+                if (tabela.ExisteB)
                 {
                     processed = await MPrc_ProcessarBackupTabelaAsync(targetB, connectionB, tabela, tabela.RegistrosB, "B", backupDirectory, sequencia, processed, total, cancellationToken);
                     sequencia++;
