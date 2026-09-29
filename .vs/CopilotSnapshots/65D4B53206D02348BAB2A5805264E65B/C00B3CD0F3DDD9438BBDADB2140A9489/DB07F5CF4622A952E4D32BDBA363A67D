@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -54,7 +54,6 @@ namespace Pegasus
         private int _ultimoPercentualProgressoTabela = -1;
         private const int KeyBackupVersao = 3;
         private const int RestoreBatchMaxRows = 2000;
-        private const int DiscoveryCommandTimeoutSeconds = 600;
         private const string SecaoConfiguracaoBackupRestore = "BackupRestore";
         private const string ChaveUltimoDiretorio = "UltimoDiretorio";
 
@@ -922,7 +921,6 @@ FROM KEY_TABELAS;";
                 await connection.OpenAsync();
 
                 await using var command = new MySqlCommand(sql, connection);
-                command.CommandTimeout = DiscoveryCommandTimeoutSeconds;
                 await using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
@@ -1164,8 +1162,6 @@ FROM KEY_TABELAS;";
             {
                 SetBusy(true);
                 MPrc_LimparStatusOperacional();
-                SetLoadingProgress("Preparando o carregamento das tabelas...");
-                await Task.Yield();
                 if (MFcn_OperacaoAtual() == OperacaoModo.Restore)
                 {
                     Log("Carregando tabelas da pasta de backup...");
@@ -1176,11 +1172,9 @@ FROM KEY_TABELAS;";
                     Log("Carregando tabelas físicas e metadados da KEY_TABELAS...");
                     await MPrc_CarregarTabelasBancoAsync(targetA!, targetB!, filtroPeriodo);
                 }
-                FinishLoadingProgress(true);
             }
             catch (Exception ex)
             {
-                FinishLoadingProgress(false);
                 MessageBox.Show($"Falha ao carregar tabelas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Log($"Erro: {ex.Message}");
             }
@@ -1589,16 +1583,15 @@ FROM KEY_TABELAS;";
 SELECT TABLE_NAME, COALESCE(TABLE_ROWS, 0) AS TABLE_ROWS
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @db
-  AND TABLE_TYPE = 'BASE TABLE';";
+  AND TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;";
 
             var tables = new List<TableInfo>();
 
-            SetLoadingProgress($"Conectando ao banco {target.Alias} para listar tabelas...");
             await using var connection = new MySqlConnection(BuildConnectionString(target));
             await connection.OpenAsync();
 
             await using var command = new MySqlCommand(query, connection);
-            command.CommandTimeout = DiscoveryCommandTimeoutSeconds;
             command.Parameters.AddWithValue("@db", target.Database);
 
             await using var reader = await command.ExecuteReaderAsync();
