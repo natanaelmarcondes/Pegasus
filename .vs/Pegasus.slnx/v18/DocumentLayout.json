@@ -3,15 +3,28 @@
   "WorkspaceRootPath": "H:\\Pegasus\\Pegasus\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\natanael\\.copilot\\plans\\plan-corrigir-carregamento-lento-de-tabelas.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}|MarkdownSecurePreview"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\modulos_integration_log.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:modulos_integration_log.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\modulohelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:modulohelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\empresas_x_modulos_validation_log.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:empresas_x_modulos_validation_log.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\keyiniconexaoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -37,7 +50,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 8,
           "Children": [
             {
               "$type": "Bookmark",
@@ -57,30 +70,72 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "plan-corrigir-carregamento-lento-de-tabelas.md [Visualiza\u00E7\u00E3o]",
-              "DocumentMoniker": "C:\\Users\\natanael\\.copilot\\plans\\plan-corrigir-carregamento-lento-de-tabelas.md",
-              "ToolTip": "C:\\Users\\natanael\\.copilot\\plans\\plan-corrigir-carregamento-lento-de-tabelas.md [Visualiza\u00E7\u00E3o]",
+              "DocumentIndex": 4,
+              "Title": "EMPRESAS_X_MODULOS_VALIDATION_LOG.md",
+              "DocumentMoniker": "H:\\Pegasus\\Pegasus\\EMPRESAS_X_MODULOS_VALIDATION_LOG.md",
+              "RelativeDocumentMoniker": "EMPRESAS_X_MODULOS_VALIDATION_LOG.md",
+              "ToolTip": "H:\\Pegasus\\Pegasus\\EMPRESAS_X_MODULOS_VALIDATION_LOG.md",
+              "RelativeToolTip": "EMPRESAS_X_MODULOS_VALIDATION_LOG.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAALUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
-              "WhenOpened": "2026-09-29T14:37:49.16Z",
-              "EditorCaption": " [Visualiza\u00E7\u00E3o]"
+              "WhenOpened": "2026-09-29T16:16:08.667Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
+              "Title": "MODULOS_INTEGRATION_LOG.md",
+              "DocumentMoniker": "H:\\Pegasus\\Pegasus\\MODULOS_INTEGRATION_LOG.md",
+              "RelativeDocumentMoniker": "MODULOS_INTEGRATION_LOG.md",
+              "ToolTip": "H:\\Pegasus\\Pegasus\\MODULOS_INTEGRATION_LOG.md",
+              "RelativeToolTip": "MODULOS_INTEGRATION_LOG.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAABVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-09-29T16:04:35.731Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ModuloHelper.cs",
+              "DocumentMoniker": "H:\\Pegasus\\Pegasus\\ModuloHelper.cs",
+              "RelativeDocumentMoniker": "ModuloHelper.cs",
+              "ToolTip": "H:\\Pegasus\\Pegasus\\ModuloHelper.cs",
+              "RelativeToolTip": "ModuloHelper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-29T16:02:46.281Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Pegasus",
+              "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
+              "RelativeDocumentMoniker": "Pegasus.csproj",
+              "ToolTip": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
+              "RelativeToolTip": "Pegasus.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-29T15:09:25.649Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "Form1.Designer.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.Designer.cs",
               "RelativeDocumentMoniker": "Form1.Designer.cs",
               "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.Designer.cs",
               "RelativeToolTip": "Form1.Designer.cs",
-              "ViewState": "AgIAAO4CAAAAAAAAAAAgwPYCAAAoAAAAAAAAAA==",
+              "ViewState": "AgIAADgCAAAAAAAAAAAQwEICAAA7AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-28T19:20:20.45Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "KeyIniConexaoService.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\KeyIniConexaoService.cs",
               "RelativeDocumentMoniker": "KeyIniConexaoService.cs",
@@ -92,31 +147,32 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "Form1.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
               "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeToolTip": "Form1.cs",
-              "ViewState": "AgIAADcAAAAAAAAAAIBWwJwBAAB+AAAAAAAAAA==",
+              "ViewState": "AgIAAC0FAAAAAAAAAAAQwD8FAABvAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-28T17:45:51.557Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "Form1.cs [Projeto]",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
               "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.cs [Projeto]",
               "RelativeToolTip": "Form1.cs [Projeto]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-28T17:36:44.068Z"
+              "WhenOpened": "2026-09-28T17:36:44.068Z",
+              "EditorCaption": " [Projeto]"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 9,
               "Title": "Form1.cs [Projeto]",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
@@ -127,7 +183,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "FormConfiguracaoInicial.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\FormConfiguracaoInicial.cs",
               "RelativeDocumentMoniker": "FormConfiguracaoInicial.cs",

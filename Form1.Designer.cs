@@ -575,7 +575,7 @@ namespace Pegasus
             // 
             // colStatusRegistros
             // 
-            colStatusRegistros.HeaderText = "Qtd.";
+            colStatusRegistros.HeaderText = "Qtd. Reg.";
             colStatusRegistros.Name = "colStatusRegistros";
             colStatusRegistros.ReadOnly = true;
             colStatusRegistros.Width = 70;

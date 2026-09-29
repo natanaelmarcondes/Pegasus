@@ -546,42 +546,54 @@ namespace Pegasus
                     continue;
                 }
 
-                var modulo = Convert.ToString(row.Cells["colModulo"].Value)?.Trim();
-                if (!string.IsNullOrWhiteSpace(modulo))
+                var sigla = row.Tag as string;
+                if (!string.IsNullOrWhiteSpace(sigla))
                 {
-                    var sigla = DLLKEY_SiglaModulo(modulo);
-                    if (!string.IsNullOrWhiteSpace(sigla))
-                    {
-                        modulos.Add(sigla);
-                    }
+                    modulos.Add(sigla);
                 }
             }
 
             return modulos.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
-        private void MPrc_PreencherGridModulos(IReadOnlyCollection<WMTbl_Tabela> tabelas)
+        private async Task MPrc_PreencherGridModulosAsync(DbTarget target, IReadOnlyCollection<WMTbl_Tabela> tabelas)
         {
             dgvModulos.Rows.Clear();
 
-            var modulos = tabelas
+            var todasSiglas = tabelas
                 .Where(t => t.Metadata is not null && !string.IsNullOrWhiteSpace(t.Metadata.Modulo))
-                .SelectMany(t => t.Metadata!.Modulo.Split([' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                .Select(DLLKEY_SiglaModulo)
-                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .SelectMany(t => ModuloHelper.SepararModulos(t.Metadata!.Modulo))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(m => m, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            foreach (var modulo in modulos)
+            var modulosValidos = new List<ModuloItem>();
+
+            foreach (var sigla in todasSiglas)
             {
-                var exibicao = modulo.Equals("ALL", StringComparison.OrdinalIgnoreCase)
-                    ? "GERAL (ALL)"
-                    : modulo;
-                dgvModulos.Rows.Add(false, exibicao);
+                // ALL sempre é adicionado sem validação
+                if (sigla.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                {
+                    modulosValidos.Add(new ModuloItem { Sigla = sigla, Descricao = ModuloHelper.DescModulo(sigla) });
+                }
+                // Outras siglas apenas se existirem em EMPRESAS_X_MODULOS
+                else if (await PossuiModuloAsync(target, sigla))
+                {
+                    modulosValidos.Add(new ModuloItem { Sigla = sigla, Descricao = ModuloHelper.DescModulo(sigla) });
+                }
             }
 
-            lblModulos.Text = $"Módulos ({modulos.Count})";
+            // Ordenar por descrição
+            var modulosOrdenados = modulosValidos
+                .OrderBy(item => item.Descricao, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var item in modulosOrdenados)
+            {
+                var indice = dgvModulos.Rows.Add(false, item.Descricao);
+                dgvModulos.Rows[indice].Tag = item.Sigla;
+            }
+
+            lblModulos.Text = $"Módulos ({modulosOrdenados.Count})";
         }
 
         private void MPrc_AplicarSelecaoAutomaticaPorModulo()
@@ -723,12 +735,7 @@ namespace Pegasus
                 return false;
             }
 
-            var modulosTabela = tabela.Metadata.Modulo
-                .Split([' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(DLLKEY_SiglaModulo)
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .ToArray();
-
+            var modulosTabela = ModuloHelper.SepararModulos(tabela.Metadata.Modulo);
             return modulosTabela.Any(x => modulosSelecionados.Contains(x, StringComparer.OrdinalIgnoreCase));
         }
 
@@ -777,34 +784,6 @@ namespace Pegasus
             }
 
             return false;
-        }
-
-        private static string DLLKEY_SiglaModulo(string? valor)
-        {
-            if (string.IsNullOrWhiteSpace(valor))
-            {
-                return string.Empty;
-            }
-
-            var texto = valor.Trim().ToUpperInvariant();
-
-            var abre = texto.LastIndexOf('(');
-            var fecha = texto.LastIndexOf(')');
-            if (abre >= 0 && fecha > abre)
-            {
-                var interno = texto.Substring(abre + 1, fecha - abre - 1).Trim();
-                if (!string.IsNullOrWhiteSpace(interno))
-                {
-                    return interno;
-                }
-            }
-
-            if (texto == "GERAL")
-            {
-                return "ALL";
-            }
-
-            return texto;
         }
 
         private bool MFcn_TentarObterFiltroPeriodo(out PeriodoFiltro filtro)
@@ -949,6 +928,41 @@ FROM KEY_TABELAS;";
             }
         }
 
+        private async Task<bool> PossuiModuloAsync(DbTarget target, string siglaModulo, string empCodigo = "")
+        {
+            if (string.IsNullOrWhiteSpace(siglaModulo))
+            {
+                return false;
+            }
+
+            try
+            {
+                await using var connection = new MySqlConnection(BuildConnectionString(target));
+                await connection.OpenAsync();
+
+                const string sql = @"
+SELECT COUNT(*) FROM EMPRESAS_X_MODULOS
+WHERE mem_Modulo = @SiglaModulo";
+
+                await using var command = new MySqlCommand(sql, connection);
+                command.Parameters.AddWithValue("@SiglaModulo", siglaModulo.Trim().ToUpperInvariant());
+
+                if (!string.IsNullOrWhiteSpace(empCodigo) && empCodigo != "00")
+                {
+                    command.CommandText += " AND emp_Codigo = @EmpCodigo";
+                    command.Parameters.AddWithValue("@EmpCodigo", empCodigo.Trim());
+                }
+
+                var result = await command.ExecuteScalarAsync();
+                return result is not null && result is long count && count > 0;
+            }
+            catch (Exception ex)
+            {
+                Log($"Aviso ao validar módulo {siglaModulo} ({target.Alias}): {ex.Message}");
+                return false;
+            }
+        }
+
         private void AddStatus(string alias, string table, string status, long rowCount)
         {
             var chave = $"{alias}|{table}";
@@ -1036,25 +1050,18 @@ FROM KEY_TABELAS;";
         private void SetLoadingProgress(string status)
         {
             progressMain.Maximum = 100;
-            progressTable.Maximum = 100;
             progressMain.Value = 0;
-            progressTable.Value = 0;
             progressMain.Style = ProgressBarStyle.Marquee;
-            progressTable.Style = ProgressBarStyle.Marquee;
             lblProgress.Text = status;
-            lblTableProgress.Text = status;
+            ResetTableProgress();
         }
 
         private void FinishLoadingProgress(bool completed)
         {
             progressMain.Maximum = 100;
-            progressTable.Maximum = 100;
             progressMain.Style = ProgressBarStyle.Continuous;
-            progressTable.Style = ProgressBarStyle.Continuous;
             progressMain.Value = completed ? 100 : 0;
-            progressTable.Value = completed ? 100 : 0;
             lblProgress.Text = completed ? "Carregamento concluído." : "Falha ao carregar tabelas.";
-            lblTableProgress.Text = lblProgress.Text;
         }
 
         private void ResetTableProgress()
@@ -1248,7 +1255,7 @@ FROM KEY_TABELAS;";
                 .Where(x => MFcn_TabelaDentroPeriodo(x.NomeFisico, filtroPeriodo))
                 .ToList();
 
-            MPrc_PreencherGridModulos(tabelasFiltradas);
+            await MPrc_PreencherGridModulosAsync(targetA, tabelasFiltradas);
             MPrc_PreencherGridTabelasLogicas(tabelasFiltradas);
             MPrc_AplicarSelecaoAutomaticaPorModulo();
             Log($"Tabelas lógicas carregadas: {tabelasFiltradas.Count} (total descobertas: {WMTbl_Tabelas.Count})");
@@ -1306,7 +1313,7 @@ FROM KEY_TABELAS;";
                     .Where(x => MFcn_TabelaDentroPeriodo(x.NomeFisico, filtroPeriodo))
                     .OrderBy(x => x.NomeFisico, StringComparer.OrdinalIgnoreCase));
 
-            MPrc_PreencherGridModulos(WMTbl_Tabelas);
+            await MPrc_PreencherGridModulosAsync(targetA, WMTbl_Tabelas);
             MPrc_PreencherGridTabelasLogicas(WMTbl_Tabelas);
             MPrc_AplicarSelecaoAutomaticaPorModulo();
             Log($"Tabelas para restore carregadas: {WMTbl_Tabelas.Count}");
