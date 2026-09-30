@@ -17,7 +17,7 @@ namespace Pegasus
         }
 
         private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
-        private sealed record TableInfo(string Name, long RowCount);
+        private sealed record TableInfo(string Name, bool? PossuiRegistros);
         private sealed record KeyTabelaMetadata(string NomeFs, string NomeLg, string Modulo, string TipoTb);
         private readonly record struct RestoreExecutionSummary(int Processed, int Errors);
         private readonly record struct PeriodoFiltro(int AnoInicial, int AnoFinal, int AnoMesInicial, int AnoMesFinal, bool Ativo);
@@ -27,6 +27,8 @@ namespace Pegasus
             public required string NomeFisico { get; init; }
             public bool ExisteA { get; set; }
             public bool ExisteB { get; set; }
+            public bool? PossuiRegistrosA { get; set; }
+            public bool? PossuiRegistrosB { get; set; }
             public long RegistrosA { get; set; }
             public long RegistrosB { get; set; }
             public string ArquivoA { get; set; } = string.Empty;
@@ -178,22 +180,48 @@ namespace Pegasus
         private void MPrc_InicializarTela()
         {
             KeyPreview = true;
-            tableMain.ColumnStyles[0].Width = 18F;
-            tableMain.ColumnStyles[1].Width = 42F;
-            tableMain.ColumnStyles[2].Width = 40F;
+
+            tableMain.ColumnStyles[0].Width = 23F;
+            tableMain.ColumnStyles[1].Width = 30F;
+            tableMain.ColumnStyles[2].Width = 35F;
+
             MPrc_EstiloGridModerno(dgvModulos);
             MPrc_EstiloGridModerno(dgvTablesA);
             MPrc_EstiloGridModerno(dgvStatus);
+
+            // GRID DE MÓDULOS
+            dgvModulos.Columns["colSelModulo"].Width = 40;
+            dgvModulos.Columns["colModulo"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+            // GRID DE TABELAS
+            dgvTablesA.Columns["colSelA"].Width = 40;
+            dgvTablesA.Columns["colTabelaA"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+            if (dgvTablesA.Columns.Contains("colQtdA"))
+            {
+                dgvTablesA.Columns["colQtdA"].Visible = false;
+            }
+
+            // GRID DE PROCESSAMENTO
+            dgvStatus.Columns["colStatusTabela"].Width = 190;
+            dgvStatus.Columns["colStatusEtapa"].Width = 140;
+            dgvStatus.Columns["colStatusRegistros"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
             MPrc_DefinirPeriodoPadrao();
+
             txt_PeriodoInicial.MaxLength = 7;
             txt_PeriodoFinal.MaxLength = 7;
+
             txt_PeriodoInicial.KeyDown += AutoTab_KeyDown;
             txt_PeriodoFinal.KeyDown += AutoTab_KeyDown;
             txtBackupBasePath.KeyDown += AutoTab_KeyDown;
+
             txt_PeriodoInicial.TextChanged += txt_PeriodoFinal_TextChanged;
+
             lblTablesA.Text = "Tabelas";
-            dgvTablesA.SortCompare += dgvTablesA_SortCompare;
+
             MPrc_AplicarModoOperacao(false);
+
             lblHeader.Text = $"Backup/Restore de Dados - {_nomeConexaoSelecionada}";
         }
 
@@ -618,8 +646,13 @@ namespace Pegasus
 
             foreach (var item in modulosOrdenados)
             {
-                var indice = dgvModulos.Rows.Add(false, item.Descricao);
-                dgvModulos.Rows[indice].Tag = item.Sigla;
+                var indice = dgvModulos.Rows.Add(
+                    false,
+                    item.Descricao.ToUpperInvariant()
+                );
+
+                dgvModulos.Rows[indice].Tag =
+                    item.Sigla.ToUpperInvariant();
             }
 
             lblModulos.Text = $"Módulos ({modulosOrdenados.Count})";
@@ -772,11 +805,17 @@ namespace Pegasus
         {
             var nome = tabela.NomeFisico;
             var nomeLower = nome.ToLowerInvariant();
-            var totalRegistros = tabela.RegistrosA + tabela.RegistrosB;
 
-            if (chkIgnorarVazias.Checked && totalRegistros <= 0)
+            if (chkIgnorarVazias.Checked)
             {
-                return false;
+                var possuiRegistros =
+                    (tabela.ExisteA && tabela.PossuiRegistrosA == true) ||
+                    (tabela.ExisteB && tabela.PossuiRegistrosB == true);
+
+                if (!possuiRegistros)
+                {
+                    return false;
+                }
             }
 
             if (chkIgnorarLog.Checked && nomeLower.Contains("log", StringComparison.Ordinal))
@@ -995,6 +1034,7 @@ WHERE mem_Modulo = @SiglaModulo";
         private void AddStatus(string alias, string table, string status, long rowCount)
         {
             var chave = $"{alias}|{table}";
+            var tabelaExibicao = table.ToUpperInvariant();
             var qtd = MFcn_FormatarQuantidade(rowCount);
             var emExecucao = MFcn_StatusEmExecucao(status);
 
@@ -1003,7 +1043,7 @@ WHERE mem_Modulo = @SiglaModulo";
                 && rowIndex < dgvStatus.Rows.Count)
             {
                 var row = dgvStatus.Rows[rowIndex];
-                row.Cells[colStatusTabela.Index].Value = table;
+                row.Cells[colStatusTabela.Index].Value = tabelaExibicao;
                 row.Cells[colStatusEtapa.Index].Value = status;
                 row.Cells[colStatusRegistros.Index].Value = qtd;
                 row.Tag = chave;
@@ -1011,7 +1051,7 @@ WHERE mem_Modulo = @SiglaModulo";
                 if (emExecucao && rowIndex != 0)
                 {
                     dgvStatus.Rows.RemoveAt(rowIndex);
-                    dgvStatus.Rows.Insert(0, table, status, qtd);
+                    dgvStatus.Rows.Insert(0, tabelaExibicao, status, qtd);
                     dgvStatus.Rows[0].Tag = chave;
                 }
 
@@ -1025,12 +1065,12 @@ WHERE mem_Modulo = @SiglaModulo";
 
             if (emExecucao)
             {
-                dgvStatus.Rows.Insert(0, table, status, qtd);
+                dgvStatus.Rows.Insert(0, tabelaExibicao, status, qtd);
                 dgvStatus.Rows[0].Tag = chave;
             }
             else
             {
-                var novoIndex = dgvStatus.Rows.Add(table, status, qtd);
+                var novoIndex = dgvStatus.Rows.Add(tabelaExibicao, status, qtd);
                 dgvStatus.Rows[novoIndex].Tag = chave;
             }
 
@@ -1040,32 +1080,6 @@ WHERE mem_Modulo = @SiglaModulo";
         private static string MFcn_FormatarQuantidade(long valor)
         {
             return valor.ToString("N0", CultureInfo.GetCultureInfo("pt-BR"));
-        }
-
-        private static long MFcn_ConverterTextoQuantidade(string? texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-            {
-                return 0;
-            }
-
-            var normalizado = texto.Trim().Replace(".", string.Empty, StringComparison.Ordinal).Replace(",", string.Empty, StringComparison.Ordinal);
-            return long.TryParse(normalizado, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor)
-                ? valor
-                : 0;
-        }
-
-        private void dgvTablesA_SortCompare(object? sender, DataGridViewSortCompareEventArgs e)
-        {
-            if (e.Column.Name != "colQtdA")
-            {
-                return;
-            }
-
-            var valor1 = MFcn_ConverterTextoQuantidade(Convert.ToString(e.CellValue1));
-            var valor2 = MFcn_ConverterTextoQuantidade(Convert.ToString(e.CellValue2));
-            e.SortResult = valor1.CompareTo(valor2);
-            e.Handled = true;
         }
 
         private void UpdateProgress(int processed, int total)
@@ -1103,19 +1117,21 @@ WHERE mem_Modulo = @SiglaModulo";
 
         private void UpdateTableProgress(string alias, string table, long processed, long total, bool completed = false)
         {
+            var tabelaExibicao = table.ToUpperInvariant();
+
             if (completed)
             {
                 progressTable.Style = ProgressBarStyle.Continuous;
                 progressTable.Value = 100;
                 _ultimoPercentualProgressoTabela = 100;
-                lblTableProgress.Text = $"Tabela concluída: {alias}.{table} | {MFcn_FormatarQuantidade(processed)} registro(s) (100%)";
+                lblTableProgress.Text = $"Tabela concluída: {alias}.{tabelaExibicao} | {MFcn_FormatarQuantidade(processed)} registro(s) (100%)";
                 return;
             }
 
             if (total <= 0)
             {
                 progressTable.Style = ProgressBarStyle.Marquee;
-                lblTableProgress.Text = $"Tabela: {alias}.{table} | {MFcn_FormatarQuantidade(processed)} registro(s) processado(s)";
+                lblTableProgress.Text = $"Tabela: {alias}.{tabelaExibicao} | {MFcn_FormatarQuantidade(processed)} registro(s) processado(s)";
                 return;
             }
 
@@ -1128,12 +1144,12 @@ WHERE mem_Modulo = @SiglaModulo";
             progressTable.Style = ProgressBarStyle.Continuous;
             progressTable.Value = percentual;
             _ultimoPercentualProgressoTabela = percentual;
-            lblTableProgress.Text = $"Tabela: {alias}.{table} | {MFcn_FormatarQuantidade(processed)} de {MFcn_FormatarQuantidade(total)} registro(s) ({percentual}%)";
+            lblTableProgress.Text = $"Tabela: {alias}.{tabelaExibicao} | {MFcn_FormatarQuantidade(processed)} de {MFcn_FormatarQuantidade(total)} registro(s) ({percentual}%)";
         }
 
         private void SetTableProgressStatus(string status, string alias, string table)
         {
-            lblTableProgress.Text = $"{status}: {alias}.{table}";
+            lblTableProgress.Text = $"{status}: {alias}.{table.ToUpperInvariant()}";
         }
 
         private void dgvStatus_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -1230,8 +1246,10 @@ WHERE mem_Modulo = @SiglaModulo";
         {
             await MPrc_CarregarMetadadosKeyTabelas(targetA, targetB);
 
-            var taskA = LoadTablesAsync(targetA);
-            var taskB = LoadTablesAsync(targetB);
+            var verificarTabelasVazias = chkIgnorarVazias.Checked;
+
+            var taskA = LoadTablesAsync(targetA, verificarTabelasVazias);
+            var taskB = LoadTablesAsync(targetB, verificarTabelasVazias);
             await Task.WhenAll(taskA, taskB);
 
             var mapa = new Dictionary<string, WMTbl_Tabela>(StringComparer.OrdinalIgnoreCase);
@@ -1249,7 +1267,7 @@ WHERE mem_Modulo = @SiglaModulo";
                 }
 
                 tabelaLogica.ExisteA = true;
-                tabelaLogica.RegistrosA = table.RowCount;
+                tabelaLogica.PossuiRegistrosA = table.PossuiRegistros;
             }
 
             foreach (var table in taskB.Result)
@@ -1265,7 +1283,7 @@ WHERE mem_Modulo = @SiglaModulo";
                 }
 
                 tabelaLogica.ExisteB = true;
-                tabelaLogica.RegistrosB = table.RowCount;
+                tabelaLogica.PossuiRegistrosB = table.PossuiRegistros;
             }
 
             return mapa.Values
@@ -1326,12 +1344,14 @@ WHERE mem_Modulo = @SiglaModulo";
                     tabela.ExisteA = true;
                     tabela.ArquivoA = file;
                     tabela.RegistrosA = MFcn_ObterQuantidadeArquivoBackup(file);
+                    tabela.PossuiRegistrosA = tabela.RegistrosA > 0;
                 }
                 else
                 {
                     tabela.ExisteB = true;
                     tabela.ArquivoB = file;
                     tabela.RegistrosB = MFcn_ObterQuantidadeArquivoBackup(file);
+                    tabela.PossuiRegistrosB = tabela.RegistrosB > 0;
                 }
             }
 
@@ -1389,12 +1409,15 @@ WHERE mem_Modulo = @SiglaModulo";
                 var idx = dgvTablesA.Rows.Add();
                 var row = dgvTablesA.Rows[idx];
                 row.Cells["colSelA"].Value = true;
-                row.Cells["colTabelaA"].Value = tabela.NomeFisico;
-                row.Cells["colQtdA"].Value = MFcn_FormatarQuantidade(tabela.RegistrosA + tabela.RegistrosB);
+
+                // Apenas a apresentação é convertida para maiúsculas.
+                // O nome físico original é mantido em row.Tag para evitar problemas
+                // em servidores Linux com nomes de tabelas sensíveis a maiúsculas/minúsculas.
+                row.Cells["colTabelaA"].Value = tabela.NomeFisico.ToUpperInvariant();
                 row.Tag = tabela;
             }
 
-            lblTablesA.Text = "Tabelas";
+            lblTablesA.Text = $"Tabelas ({tabelas.Count})";
         }
 
         private async void btnBackup_Click(object sender, EventArgs e)
@@ -1619,33 +1642,64 @@ WHERE mem_Modulo = @SiglaModulo";
                 : "Solicitado cancelamento do backup.");
         }
 
-        private async Task<List<TableInfo>> LoadTablesAsync(DbTarget target)
+        private async Task<List<TableInfo>> LoadTablesAsync(DbTarget target, bool verificarTabelasVazias)
         {
             const string query = @"
-SELECT TABLE_NAME, COALESCE(TABLE_ROWS, 0) AS TABLE_ROWS
+SELECT TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @db
-  AND TABLE_TYPE = 'BASE TABLE';";
+  AND TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;";
 
+            var nomesTabelas = new List<string>();
             var tables = new List<TableInfo>();
 
             SetLoadingProgress($"Conectando ao banco {target.Alias} para listar tabelas...");
+
             await using var connection = new MySqlConnection(BuildConnectionString(target));
             await connection.OpenAsync();
 
-            await using var command = new MySqlCommand(query, connection);
-            command.CommandTimeout = DiscoveryCommandTimeoutSeconds;
-            command.Parameters.AddWithValue("@db", target.Database);
-
-            await using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            // Primeiro carrega somente os nomes. Não consulta TABLE_ROWS.
+            await using (var command = new MySqlCommand(query, connection))
             {
-                var name = reader.GetString(0);
-                var rows = Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture);
-                tables.Add(new TableInfo(name, rows));
+                command.CommandTimeout = DiscoveryCommandTimeoutSeconds;
+                command.Parameters.AddWithValue("@db", target.Database);
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    nomesTabelas.Add(reader.GetString(0));
+                }
+            }
+
+            foreach (var nomeTabela in nomesTabelas)
+            {
+                bool? possuiRegistros = null;
+
+                if (verificarTabelasVazias)
+                {
+                    possuiRegistros = await MFcn_TabelaPossuiRegistrosAsync(connection, nomeTabela);
+                }
+
+                tables.Add(new TableInfo(nomeTabela, possuiRegistros));
             }
 
             return tables;
+        }
+
+        private static async Task<bool> MFcn_TabelaPossuiRegistrosAsync(
+            MySqlConnection connection,
+            string nomeTabela)
+        {
+            var escapedTable = nomeTabela.Replace("`", "``", StringComparison.Ordinal);
+            var sql = $"SELECT 1 FROM `{escapedTable}` LIMIT 1;";
+
+            await using var command = new MySqlCommand(sql, connection);
+            command.CommandTimeout = DiscoveryCommandTimeoutSeconds;
+
+            var resultado = await command.ExecuteScalarAsync();
+
+            return resultado is not null && resultado != DBNull.Value;
         }
 
         private async Task<int> BackupTablesAsync(DbTarget targetA, DbTarget targetB, IReadOnlyCollection<WMTbl_Tabela> tabelas, string backupDirectory, int processed, int total, CancellationToken cancellationToken)
@@ -1661,13 +1715,13 @@ WHERE TABLE_SCHEMA = @db
             {
                 if (tabela.ExisteA)
                 {
-                    processed = await MPrc_ProcessarBackupTabelaAsync(targetA, connectionA, tabela, tabela.RegistrosA, "A", backupDirectory, sequencia, processed, total, cancellationToken);
+                    processed = await MPrc_ProcessarBackupTabelaAsync(targetA, connectionA, tabela, "A", backupDirectory, sequencia, processed, total, cancellationToken);
                     sequencia++;
                 }
 
                 if (tabela.ExisteA && tabela.ExisteB)
                 {
-                    processed = await MPrc_ProcessarBackupTabelaAsync(targetB, connectionB, tabela, tabela.RegistrosB, "B", backupDirectory, sequencia, processed, total, cancellationToken);
+                    processed = await MPrc_ProcessarBackupTabelaAsync(targetB, connectionB, tabela, "B", backupDirectory, sequencia, processed, total, cancellationToken);
                     sequencia++;
                 }
             }
@@ -1679,7 +1733,6 @@ WHERE TABLE_SCHEMA = @db
             DbTarget target,
             MySqlConnection connection,
             WMTbl_Tabela tabela,
-            long rowCount,
             string aliasArquivo,
             string backupDirectory,
             int sequencia,
@@ -1692,26 +1745,51 @@ WHERE TABLE_SCHEMA = @db
             _pularTabelaSolicitado = false;
             var arquivo = MFcn_MontarNomeArquivoBackup(sequencia, aliasArquivo, tabela.NomeFisico, MFcn_ObterNomeBaseBancoBackup());
             var caminhoArquivo = Path.Combine(backupDirectory, arquivo);
+            long rowCount = 0;
 
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                AddStatus(target.Alias, tabela.NomeFisico, "Processando", rowCount);
+                // A quantidade real é consultada somente quando a tabela entra
+                // efetivamente em processamento. Ela não é usada na listagem central.
+                rowCount = await MFcn_ObterQuantidadeRealRegistrosAsync(
+                    connection,
+                    tabela.NomeFisico,
+                    cancellationToken);
+
+                if (target.Alias == "A")
+                {
+                    tabela.RegistrosA = rowCount;
+                }
+                else
+                {
+                    tabela.RegistrosB = rowCount;
+                }
+
+                AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Processando", rowCount);
+
                 long registrosProcessados = 0;
                 long totalRegistros = rowCount;
-                UpdateTableProgress(target.Alias, tabela.NomeFisico, 0, rowCount);
+
+                UpdateTableProgress(target.Alias, tabela.NomeFisico.ToUpperInvariant(), 0, rowCount);
+
                 await MPrc_GravarArquivoBackupTabelaAsync(
                     connection,
                     target.Alias,
                     tabela.NomeFisico,
                     caminhoArquivo,
                     chaveTabela,
-                    (processados, total) =>
+                    rowCount,
+                    (processados, totalTabela) =>
                     {
                         registrosProcessados = processados;
-                        totalRegistros = total;
-                        UpdateTableProgress(target.Alias, tabela.NomeFisico, processados, total);
+                        totalRegistros = totalTabela;
+                        UpdateTableProgress(
+                            target.Alias,
+                            tabela.NomeFisico.ToUpperInvariant(),
+                            processados,
+                            totalTabela);
                     },
                     cancellationToken);
 
@@ -1724,8 +1802,14 @@ WHERE TABLE_SCHEMA = @db
                     tabela.ArquivoB = caminhoArquivo;
                 }
 
-                AddStatus(target.Alias, tabela.NomeFisico, "Concluído", rowCount);
-                UpdateTableProgress(target.Alias, tabela.NomeFisico, registrosProcessados, totalRegistros, true);
+                AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Concluído", totalRegistros);
+                UpdateTableProgress(
+                    target.Alias,
+                    tabela.NomeFisico.ToUpperInvariant(),
+                    registrosProcessados,
+                    totalRegistros,
+                    true);
+
                 processed++;
                 UpdateProgress(processed, total);
                 return processed;
@@ -1737,8 +1821,8 @@ WHERE TABLE_SCHEMA = @db
                     File.Delete(caminhoArquivo);
                 }
 
-                AddStatus(target.Alias, tabela.NomeFisico, "Pulada", rowCount);
-                SetTableProgressStatus("Tabela pulada", target.Alias, tabela.NomeFisico);
+                AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Pulada", rowCount);
+                SetTableProgressStatus("Tabela pulada", target.Alias, tabela.NomeFisico.ToUpperInvariant());
                 processed++;
                 UpdateProgress(processed, total);
                 return processed;
@@ -1750,8 +1834,8 @@ WHERE TABLE_SCHEMA = @db
                     File.Delete(caminhoArquivo);
                 }
 
-                AddStatus(target.Alias, tabela.NomeFisico, "Cancelado", rowCount);
-                SetTableProgressStatus("Backup cancelado", target.Alias, tabela.NomeFisico);
+                AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Cancelado", rowCount);
+                SetTableProgressStatus("Backup cancelado", target.Alias, tabela.NomeFisico.ToUpperInvariant());
                 throw;
             }
             catch
@@ -1761,8 +1845,8 @@ WHERE TABLE_SCHEMA = @db
                     File.Delete(caminhoArquivo);
                 }
 
-                AddStatus(target.Alias, tabela.NomeFisico, "Erro", rowCount);
-                SetTableProgressStatus("Falha no backup", target.Alias, tabela.NomeFisico);
+                AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Erro", rowCount);
+                SetTableProgressStatus("Falha no backup", target.Alias, tabela.NomeFisico.ToUpperInvariant());
                 throw;
             }
             finally
@@ -1785,6 +1869,7 @@ WHERE TABLE_SCHEMA = @db
             string nomeTabela,
             string caminhoArquivo,
             string chaveTabela,
+            long rowCount,
             Action<long, long> progresso,
             CancellationToken cancellationToken)
         {
@@ -1795,7 +1880,6 @@ WHERE TABLE_SCHEMA = @db
             }
 
             var escapedTable = nomeTabela.Replace("`", "``", StringComparison.Ordinal);
-            var rowCount = await MFcn_ObterQuantidadeRealRegistrosAsync(connection, nomeTabela, cancellationToken);
             progresso(0, rowCount);
             var createStatement = await GetCreateTableSqlAsync(connection, nomeTabela, cancellationToken);
 

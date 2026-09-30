@@ -7,6 +7,10 @@
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|H:\\Pegasus\\Pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
@@ -21,10 +25,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\formconfiguracaoinicial.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:formconfiguracaoinicial.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|H:\\Pegasus\\Pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5A3564CE-F1F5-41C6-9A75-10CBF1A4CE9D}|Pegasus.csproj|H:\\Pegasus\\Pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
@@ -58,7 +58,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Pegasus.csproj",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
               "RelativeDocumentMoniker": "Pegasus.csproj",
@@ -66,12 +66,11 @@
               "RelativeToolTip": "Pegasus.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-09-29T15:09:25.649Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-29T15:09:25.649Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "Form1.Designer.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.Designer.cs",
               "RelativeDocumentMoniker": "Form1.Designer.cs",
@@ -79,11 +78,12 @@
               "RelativeToolTip": "Form1.Designer.cs",
               "ViewState": "AgIAAC8CAAAAAAAAAAAQwEECAAAxAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-28T19:20:20.45Z"
+              "WhenOpened": "2026-09-28T19:20:20.45Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "KeyIniConexaoService.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\KeyIniConexaoService.cs",
               "RelativeDocumentMoniker": "KeyIniConexaoService.cs",
@@ -101,22 +101,22 @@
               "RelativeDocumentMoniker": "Form1.cs",
               "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeToolTip": "Form1.cs",
-              "ViewState": "AgIAAHYJAAAAAAAAAAAgwJIJAAA3AAAAAAAAAA==",
+              "ViewState": "AgIAAMsJAAAAAAAAAAAQwNIJAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-28T17:45:51.557Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "Form1.cs [Design]",
+              "DocumentIndex": 1,
+              "Title": "Form1.cs [Projeto]",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
-              "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.cs [Design]",
-              "RelativeToolTip": "Form1.cs [Design]",
+              "ToolTip": "H:\\Pegasus\\Pegasus\\Form1.cs [Projeto]",
+              "RelativeToolTip": "Form1.cs [Projeto]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-28T17:36:44.068Z",
-              "EditorCaption": " [Design]"
+              "EditorCaption": " [Projeto]"
             },
             {
               "$type": "Document",
@@ -131,7 +131,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "FormConfiguracaoInicial.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\FormConfiguracaoInicial.cs",
               "RelativeDocumentMoniker": "FormConfiguracaoInicial.cs",
