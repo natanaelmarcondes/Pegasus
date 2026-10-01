@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "H:\\Pegasus\\Pegasus\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|H:\\Pegasus\\Pegasus\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|solutionrelative:pegasus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3725068E-82F7-95B6-C75D-AB59F93866D5}|Pegasus.csproj|h:\\pegasus\\pegasus\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -38,7 +38,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,15 +58,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Pegasus.csproj",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
               "RelativeDocumentMoniker": "Pegasus.csproj",
               "ToolTip": "H:\\Pegasus\\Pegasus\\Pegasus.csproj",
               "RelativeToolTip": "Pegasus.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-09-29T15:09:25.649Z"
+              "WhenOpened": "2026-09-29T15:09:25.649Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -95,7 +96,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Form1.cs",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
@@ -108,7 +109,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Form1.cs [Projeto]",
               "DocumentMoniker": "H:\\Pegasus\\Pegasus\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
