@@ -2,6 +2,7 @@ using MySqlConnector;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Pegasus
 {
@@ -63,6 +64,25 @@ namespace Pegasus
         public Form1()
         {
             InitializeComponent();
+            Shown += Form1_Shown;
+        }
+
+        private async void Form1_Shown(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (WindowState == FormWindowState.Minimized)
+                    WindowState = FormWindowState.Normal;
+                TopMost = true;
+                Show();
+                Activate();
+                BringToFront();
+                await Task.Delay(500).ConfigureAwait(true);
+                TopMost = false;
+            }
+            catch
+            {
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
