@@ -20,6 +20,7 @@ namespace Pegasus
         private sealed record DbTarget(string Alias, string Host, uint Port, string Database, string User, string Password);
         private sealed record TableInfo(string Name, bool? PossuiRegistros);
         private sealed record KeyTabelaMetadata(string NomeFs, string NomeLg, string Modulo, string TipoTb);
+        private readonly record struct BackupFileHeader(int Versao, string Alias, string Tabela, long QuantidadeRegistros);
         private readonly record struct RestoreExecutionSummary(int Processed, int Errors);
         private readonly record struct PeriodoFiltro(int AnoInicial, int AnoFinal, int AnoMesInicial, int AnoMesFinal, bool Ativo);
 
@@ -60,6 +61,7 @@ namespace Pegasus
         private const int DiscoveryCommandTimeoutSeconds = 600;
         private const string SecaoConfiguracaoBackupRestore = "BackupRestore";
         private const string ChaveUltimoDiretorio = "UltimoDiretorio";
+        private const string NomeArquivoManifestoBackup = "PEGASUS.KEYBACKUP";
 
         public Form1()
         {
@@ -395,6 +397,127 @@ namespace Pegasus
         private static bool MFcn_StatusEmExecucao(string status)
         {
             return status == "Processando" || status == "Restaurando";
+        }
+
+        private static void MPrc_GravarManifestoBackup(string backupDirectory)
+        {
+            var linhas = new[]
+            {
+                "PEGASUS|KEYBACKUP",
+                $"VERSAO={KeyBackupVersao}",
+                $"GERADO_EM={DateTime.Now:O}",
+                $"APLICATIVO={ObterNomeAplicativoConfiguracao()}",
+            };
+
+            File.WriteAllLines(
+                Path.Combine(backupDirectory, NomeArquivoManifestoBackup),
+                linhas,
+                new UTF8Encoding(false));
+        }
+
+        private static bool MFcn_TentarLerCabecalhoArquivoBackup(string filePath, out BackupFileHeader cabecalho)
+        {
+            cabecalho = default;
+
+            try
+            {
+                using var reader = new StreamReader(filePath, Encoding.UTF8, true);
+                var primeiraLinha = reader.ReadLine();
+                if (string.IsNullOrWhiteSpace(primeiraLinha)
+                    || !primeiraLinha.StartsWith("#KEYBACKUP|", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                var partes = primeiraLinha.Split('|');
+                if (partes.Length < 5
+                    || !int.TryParse(partes[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var versao)
+                    || !long.TryParse(partes[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var quantidadeRegistros))
+                {
+                    return false;
+                }
+
+                var alias = partes[2].Trim().ToUpperInvariant();
+                var tabela = partes[3].Trim();
+                if ((alias != "A" && alias != "B") || string.IsNullOrWhiteSpace(tabela))
+                {
+                    return false;
+                }
+
+                cabecalho = new BackupFileHeader(versao, alias, tabela, quantidadeRegistros);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string[] MFcn_ValidarPastaBackupRestore(string backupDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(backupDirectory) || !Directory.Exists(backupDirectory))
+            {
+                throw new InvalidOperationException("Informe uma pasta de backup válida.");
+            }
+
+            var manifesto = Path.Combine(backupDirectory, NomeArquivoManifestoBackup);
+            if (File.Exists(manifesto))
+            {
+                var linhasManifesto = File.ReadAllLines(manifesto, Encoding.UTF8);
+                var versaoManifesto = linhasManifesto
+                    .FirstOrDefault(x => x.StartsWith("VERSAO=", StringComparison.OrdinalIgnoreCase));
+
+                if (linhasManifesto.Length == 0
+                    || !string.Equals(linhasManifesto[0].Trim(), "PEGASUS|KEYBACKUP", StringComparison.OrdinalIgnoreCase)
+                    || versaoManifesto is null
+                    || !int.TryParse(versaoManifesto[7..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var versaoArquivo)
+                    || versaoArquivo != KeyBackupVersao)
+                {
+                    throw new InvalidOperationException("A pasta selecionada contém um manifesto de backup incompatível com esta versão do Pegasus.");
+                }
+            }
+
+            var sqlFiles = Directory.GetFiles(backupDirectory, "*.sql", SearchOption.TopDirectoryOnly)
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (sqlFiles.Length == 0)
+            {
+                throw new InvalidOperationException("A pasta informada não contém arquivos de backup do Pegasus.");
+            }
+
+            var arquivosInvalidos = new List<string>();
+            foreach (var file in sqlFiles)
+            {
+                if (!MFcn_TentarLerCabecalhoArquivoBackup(file, out var cabecalho))
+                {
+                    arquivosInvalidos.Add($"{Path.GetFileName(file)} (sem assinatura Pegasus)");
+                    continue;
+                }
+
+                if (cabecalho.Versao != KeyBackupVersao)
+                {
+                    arquivosInvalidos.Add($"{Path.GetFileName(file)} (versão {cabecalho.Versao})");
+                    continue;
+                }
+
+                var parsed = MFcn_ExtrairBancoETabelaDeArquivoRestore(file);
+                if (parsed is null
+                    || !string.Equals(parsed.Value.alias, cabecalho.Alias, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(parsed.Value.table, cabecalho.Tabela, StringComparison.OrdinalIgnoreCase))
+                {
+                    arquivosInvalidos.Add($"{Path.GetFileName(file)} (nome incompatível com cabeçalho)");
+                }
+            }
+
+            if (arquivosInvalidos.Count > 0)
+            {
+                var amostra = string.Join(", ", arquivosInvalidos.Take(3));
+                var sufixo = arquivosInvalidos.Count > 3 ? " ..." : string.Empty;
+                throw new InvalidOperationException($"A pasta selecionada contém backup de outro programa ou de versão antiga/incompatível. Arquivos inválidos: {amostra}{sufixo}");
+            }
+
+            return sqlFiles;
         }
 
         private string BuildBackupDirectory()
@@ -1067,12 +1190,14 @@ WHERE mem_Modulo = @SiglaModulo";
                 row.Cells[colStatusEtapa.Index].Value = status;
                 row.Cells[colStatusRegistros.Index].Value = qtd;
                 row.Tag = chave;
+                row.ErrorText = string.Empty;
 
                 if (emExecucao && rowIndex != 0)
                 {
                     dgvStatus.Rows.RemoveAt(rowIndex);
                     dgvStatus.Rows.Insert(0, tabelaExibicao, status, qtd);
                     dgvStatus.Rows[0].Tag = chave;
+                    dgvStatus.Rows[0].ErrorText = string.Empty;
                 }
 
                 MPrc_ReconstruirMapaStatus();
@@ -1087,14 +1212,27 @@ WHERE mem_Modulo = @SiglaModulo";
             {
                 dgvStatus.Rows.Insert(0, tabelaExibicao, status, qtd);
                 dgvStatus.Rows[0].Tag = chave;
+                dgvStatus.Rows[0].ErrorText = string.Empty;
             }
             else
             {
                 var novoIndex = dgvStatus.Rows.Add(tabelaExibicao, status, qtd);
                 dgvStatus.Rows[novoIndex].Tag = chave;
+                dgvStatus.Rows[novoIndex].ErrorText = string.Empty;
             }
 
             MPrc_ReconstruirMapaStatus();
+        }
+
+        private void SetStatusDetail(string alias, string table, string? detail)
+        {
+            var chave = $"{alias}|{table}";
+            if (_wmStatusRowByChave.TryGetValue(chave, out var rowIndex)
+                && rowIndex >= 0
+                && rowIndex < dgvStatus.Rows.Count)
+            {
+                dgvStatus.Rows[rowIndex].ErrorText = detail?.Trim() ?? string.Empty;
+            }
         }
 
         private static string MFcn_FormatarQuantidade(long valor)
@@ -1220,6 +1358,35 @@ WHERE mem_Modulo = @SiglaModulo";
             e.Handled = true;
         }
 
+        private void dgvStatus_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= dgvStatus.Rows.Count)
+            {
+                return;
+            }
+
+            var row = dgvStatus.Rows[e.RowIndex];
+            var tabela = Convert.ToString(row.Cells[colStatusTabela.Index].Value) ?? string.Empty;
+            var status = Convert.ToString(row.Cells[colStatusEtapa.Index].Value) ?? string.Empty;
+            var registros = Convert.ToString(row.Cells[colStatusRegistros.Index].Value) ?? string.Empty;
+            var detalhe = row.ErrorText?.Trim();
+
+            var texto = string.IsNullOrWhiteSpace(detalhe)
+                ? $"Tabela: {tabela} | Status: {status} | Registros: {registros}"
+                : $"Tabela: {tabela} | Status: {status} | Registros: {registros} | Detalhe: {detalhe}";
+
+            try
+            {
+                Clipboard.SetText(texto);
+                Log("Status copiado para a memória.");
+                MessageBox.Show("Conteúdo copiado para o clipboard.", "Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Log($"Aviso: não foi possível copiar o status. {ex.Message}");
+            }
+        }
+
         private async void btnLoadTables_Click(object sender, EventArgs e)
         {
             if (!TryGetTargets(out var targetA, out var targetB))
@@ -1330,15 +1497,10 @@ WHERE mem_Modulo = @SiglaModulo";
 
         private async Task MPrc_CarregarTabelasRestoreAsync(DbTarget targetA, DbTarget targetB, PeriodoFiltro filtroPeriodo)
         {
-            if (string.IsNullOrWhiteSpace(txtBackupBasePath.Text) || !Directory.Exists(txtBackupBasePath.Text))
-            {
-                MessageBox.Show("Informe uma pasta de backup válida.", "Restore", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            var sqlFiles = MFcn_ValidarPastaBackupRestore(txtBackupBasePath.Text.Trim());
 
             await MPrc_CarregarMetadadosKeyTabelas(targetA, targetB);
 
-            var sqlFiles = Directory.GetFiles(txtBackupBasePath.Text, "*.sql", SearchOption.TopDirectoryOnly);
             var restoreMap = new Dictionary<string, WMTbl_Tabela>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var file in sqlFiles)
@@ -1390,34 +1552,9 @@ WHERE mem_Modulo = @SiglaModulo";
 
         private static long MFcn_ObterQuantidadeArquivoBackup(string filePath)
         {
-            try
-            {
-                using var reader = new StreamReader(filePath, Encoding.UTF8, true);
-                var primeiraLinha = reader.ReadLine();
-                if (string.IsNullOrWhiteSpace(primeiraLinha))
-                {
-                    return 0;
-                }
-
-                if (!primeiraLinha.StartsWith("#KEYBACKUP|", StringComparison.OrdinalIgnoreCase))
-                {
-                    return 0;
-                }
-
-                var partes = primeiraLinha.Split('|');
-                if (partes.Length < 5)
-                {
-                    return 0;
-                }
-
-                return long.TryParse(partes[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var qtd)
-                    ? qtd
-                    : 0;
-            }
-            catch
-            {
-                return 0;
-            }
+            return MFcn_TentarLerCabecalhoArquivoBackup(filePath, out var cabecalho)
+                ? cabecalho.QuantidadeRegistros
+                : 0;
         }
 
         private void MPrc_PreencherGridTabelasLogicas(IReadOnlyCollection<WMTbl_Tabela> tabelas)
@@ -1492,6 +1629,7 @@ WHERE mem_Modulo = @SiglaModulo";
 
                 var backupDirectory = BuildBackupDirectory();
                 Directory.CreateDirectory(backupDirectory);
+                MPrc_GravarManifestoBackup(backupDirectory);
                 txtBackupBasePath.Text = backupDirectory;
                 Log($"Gerando backup em: {backupDirectory}");
 
@@ -1542,6 +1680,7 @@ WHERE mem_Modulo = @SiglaModulo";
 
             try
             {
+                _ = MFcn_ValidarPastaBackupRestore(txtBackupBasePath.Text.Trim());
                 _backupCancellation = new CancellationTokenSource();
                 SetBusy(true);
                 btnRestore.Enabled = true;
@@ -1665,11 +1804,11 @@ WHERE mem_Modulo = @SiglaModulo";
         private async Task<List<TableInfo>> LoadTablesAsync(DbTarget target, bool verificarTabelasVazias)
         {
             const string query = @"
-SELECT TABLE_NAME
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = @db
-  AND TABLE_TYPE = 'BASE TABLE'
-ORDER BY TABLE_NAME;";
+                            SELECT TABLE_NAME
+                            FROM INFORMATION_SCHEMA.TABLES
+                            WHERE TABLE_SCHEMA = @db
+                            AND TABLE_TYPE = 'BASE TABLE'
+                            ORDER BY TABLE_NAME;";
 
             var nomesTabelas = new List<string>();
             var tables = new List<TableInfo>();
@@ -1858,7 +1997,7 @@ ORDER BY TABLE_NAME;";
                 SetTableProgressStatus("Backup cancelado", target.Alias, tabela.NomeFisico.ToUpperInvariant());
                 throw;
             }
-            catch
+            catch (Exception ex)
             {
                 if (File.Exists(caminhoArquivo))
                 {
@@ -1866,6 +2005,7 @@ ORDER BY TABLE_NAME;";
                 }
 
                 AddStatus(target.Alias, tabela.NomeFisico.ToUpperInvariant(), "Erro", rowCount);
+                SetStatusDetail(target.Alias, tabela.NomeFisico.ToUpperInvariant(), ex.Message);
                 SetTableProgressStatus("Falha no backup", target.Alias, tabela.NomeFisico.ToUpperInvariant());
                 throw;
             }
@@ -2444,6 +2584,7 @@ ORDER BY TABLE_NAME;";
                         }
 
                         AddStatus(targetA.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosA);
+                        SetStatusDetail(targetA.Alias, tabela.NomeFisico, ex.Message);
                         SetTableProgressStatus("Falha no restore", targetA.Alias, tabela.NomeFisico);
                         errors++;
                         processed++;
@@ -2490,6 +2631,7 @@ ORDER BY TABLE_NAME;";
                         }
 
                         AddStatus(targetB.Alias, tabela.NomeFisico, "Erro", tabela.RegistrosB);
+                        SetStatusDetail(targetB.Alias, tabela.NomeFisico, ex.Message);
                         SetTableProgressStatus("Falha no restore", targetB.Alias, tabela.NomeFisico);
                         errors++;
                         processed++;

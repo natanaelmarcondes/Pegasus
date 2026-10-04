@@ -556,6 +556,7 @@ namespace Pegasus
             dgvStatus.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvStatus.Size = new Size(405, 358);
             dgvStatus.TabIndex = 1;
+            dgvStatus.CellClick += dgvStatus_CellClick;
             dgvStatus.CellPainting += dgvStatus_CellPainting;
             // 
             // colStatusTabela
