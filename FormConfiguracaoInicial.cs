@@ -164,7 +164,8 @@ namespace Pegasus
             IReadOnlyList<ConfiguracaoConexao> conexoes;
             try
             {
-                _servicoConexoes = new KeyIniConexaoService();
+                // passa o caminho completo do KEY.INI para o serviço (respeita /INI:)
+                _servicoConexoes = new KeyIniConexaoService(caminhoIni);
                 conexoes = _servicoConexoes.CarregarConexoes();
             }
             catch (Exception ex)
@@ -184,6 +185,38 @@ namespace Pegasus
 
             if (_cboConexoes.Items.Count > 0)
             {
+                // se parâmetro /CNX: foi informado, ele tem prioridade sobre ICNXAT
+                var nomeParametros = ConfiguracaoRuntime.Parametros?.NomeConexao;
+                if (!string.IsNullOrWhiteSpace(nomeParametros))
+                {
+                    try
+                    {
+                        var codigoEncontrado = _servicoConexoes.LocalizarCodigoConexaoPorNome(nomeParametros);
+                        if (codigoEncontrado.HasValue)
+                        {
+                            var idx = -1;
+                            for (var i = 0; i < _cboConexoes.Items.Count; i++)
+                            {
+                                if (_cboConexoes.Items[i] is ConfiguracaoConexao item && item.Codigo == codigoEncontrado.Value)
+                                {
+                                    idx = i;
+                                    break;
+                                }
+                            }
+
+                            if (idx >= 0)
+                            {
+                                _cboConexoes.SelectedIndex = idx;
+                                return;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // se houver erro na busca pelo nome, continua com o comportamento padrão
+                    }
+                }
+
                 var codigoAtivo = _servicoConexoes?.LerCodigoConexaoAtiva() ?? 0;
                 var indiceSelecionado = -1;
                 for (var i = 0; i < _cboConexoes.Items.Count; i++)

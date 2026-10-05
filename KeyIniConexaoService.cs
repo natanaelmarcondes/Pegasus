@@ -60,6 +60,29 @@ namespace Pegasus
                 : 0;
         }
 
+        public int? LocalizarCodigoConexaoPorNome(string nomeConexao)
+        {
+            if (string.IsNullOrWhiteSpace(nomeConexao))
+            {
+                return null;
+            }
+
+            MPrc_GarantirPrefixoDetectado();
+            var alvo = nomeConexao.Trim();
+
+            for (var codigo = 0; codigo <= 29; codigo++)
+            {
+                var sufixo = MFcn_ObterSufixoConexao(codigo);
+                var nome = MFcn_LerValorCampo("CNF00", sufixo);
+                if (!string.IsNullOrWhiteSpace(nome) && string.Equals(nome.Trim(), alvo, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    return codigo;
+                }
+            }
+
+            return null;
+        }
+
         public (string Login, string Senha, bool LembrarSenha) LerDadosUltimoLogin()
         {
             MPrc_GarantirPrefixoDetectado();

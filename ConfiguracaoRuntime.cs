@@ -1,9 +1,12 @@
+using System;
+
 namespace Pegasus
 {
     internal static class ConfiguracaoRuntime
     {
-        public static string DiretorioConfigIni { get; set; } = string.Empty;
+        public static string DiretorioConfigIni { get; private set; } = string.Empty;
         public static string TipoSistema { get; set; } = "IND";
+        public static ParametrosLinhaComando Parametros { get; } = new ParametrosLinhaComando();
 
         public static void AplicarArgumentos(string[] args)
         {
@@ -14,23 +17,62 @@ namespace Pegasus
 
             foreach (var argumento in args)
             {
-                if (!argumento.StartsWith("/INI:", StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrWhiteSpace(argumento))
                 {
-                    if (argumento.StartsWith("/TIPSIS:", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                }
+
+                if (argumento.StartsWith("/INI:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var diretorio = argumento[5..].Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(diretorio))
                     {
-                        var tipoSis = argumento[8..].Trim().Trim('"');
-                        if (!string.IsNullOrWhiteSpace(tipoSis))
-                        {
-                            TipoSistema = tipoSis;
-                        }
+                        var expandido = Environment.ExpandEnvironmentVariables(diretorio);
+                        Parametros.DiretorioIni = expandido;
+                        DiretorioConfigIni = expandido;
                     }
 
                     continue;
                 }
 
-                var diretorio = argumento[5..].Trim().Trim('"');
-                DiretorioConfigIni = diretorio;
-                break;
+                if (argumento.StartsWith("/INIDEF:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var diretorio = argumento[8..].Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(diretorio))
+                    {
+                        Parametros.DiretorioIniDefault = Environment.ExpandEnvironmentVariables(diretorio);
+                    }
+
+                    continue;
+                }
+
+                if (argumento.StartsWith("/CNX:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var nome = argumento[5..].Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(nome))
+                    {
+                        Parametros.NomeConexao = nome.ToUpperInvariant();
+                    }
+
+                    continue;
+                }
+
+                if (argumento.StartsWith("/TIPSIS:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var tipoSis = argumento[8..].Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(tipoSis))
+                    {
+                        TipoSistema = tipoSis;
+                    }
+
+                    continue;
+                }
+            }
+
+            // Se nenhum /INI: foi informado, mas existe /INIDEF:, usa como fallback para DiretorioConfigIni
+            if (string.IsNullOrWhiteSpace(DiretorioConfigIni) && !string.IsNullOrWhiteSpace(Parametros.DiretorioIniDefault))
+            {
+                DiretorioConfigIni = Parametros.DiretorioIniDefault;
             }
         }
     }
