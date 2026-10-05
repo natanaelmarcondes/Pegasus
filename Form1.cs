@@ -228,6 +228,12 @@ namespace Pegasus
             dgvStatus.Columns["colStatusTabela"].Width = 190;
             dgvStatus.Columns["colStatusEtapa"].Width = 140;
             dgvStatus.Columns["colStatusRegistros"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            // Não permite ordenar nem reordenar colunas para preservar ordem do status
+            dgvStatus.AllowUserToOrderColumns = false;
+            foreach (DataGridViewColumn _col in dgvStatus.Columns)
+            {
+                _col.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
 
             MPrc_DefinirPeriodoPadrao();
 
@@ -245,6 +251,8 @@ namespace Pegasus
             MPrc_AplicarModoOperacao(false);
 
             lblHeader.Text = $"Backup/Restore de Dados - {_nomeConexaoSelecionada}";
+            // inclui versão no caption do form
+            AppInfo.AppendVersao(this);
         }
 
         private void AutoTab_KeyDown(object sender, KeyEventArgs e)
@@ -549,6 +557,79 @@ namespace Pegasus
 
             return nome.ToUpperInvariant();
         }
+
+        private static DialogResult ShowMessageTopMost(Form owner, string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icon)
+        {
+            var prev = owner.TopMost;
+            try
+            {
+                owner.TopMost = true;
+                return MessageBox.Show(owner, text, caption, buttons, icon);
+            }
+            finally
+            {
+                owner.TopMost = prev;
+            }
+        }
+
+        private static bool MFcn_SaoNomesBancosParecidos(string databaseName, string folderName)
+        {
+            if (string.IsNullOrWhiteSpace(folderName) || string.IsNullOrWhiteSpace(databaseName))
+            {
+                return true;
+            }
+
+            // normalize database name using existing normalizer (base name)
+            var dbBase = MFcn_NormalizarNomeBaseBanco(databaseName);
+
+            // get folder base name (last segment)
+            var folderBase = Path.GetFileName(folderName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(folderBase)) return true;
+
+            // strip common timestamp suffixes like -yyyyMMdd_HHmmss or _yyyyMMdd_HHmmss
+            var m = Regex.Match(folderBase, @"^(.*?)(?:[-_]\d{8}_\d{6})?$");
+            var folderPrefix = m.Success ? m.Groups[1].Value : folderBase;
+
+            // normalize by removing non-alphanumeric and uppercasing
+            string Normalize(string s) => Regex.Replace(s ?? string.Empty, "[^A-Za-z0-9]", string.Empty).ToUpperInvariant();
+
+            var nDb = Normalize(dbBase);
+            var nFold = Normalize(folderPrefix);
+
+            if (string.IsNullOrWhiteSpace(nDb) || string.IsNullOrWhiteSpace(nFold)) return true;
+
+            // if one contains the other -> similar enough
+            if (nDb.Contains(nFold, StringComparison.OrdinalIgnoreCase) || nFold.Contains(nDb, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // fallback to small Levenshtein distance (allow small typos)
+            var dist = LevenshteinDistance(nDb, nFold);
+            return dist <= 2;
+        }
+
+        private static int LevenshteinDistance(string s, string t)
+        {
+            if (string.IsNullOrEmpty(s)) return string.IsNullOrEmpty(t) ? 0 : t.Length;
+            if (string.IsNullOrEmpty(t)) return s.Length;
+
+            var n = s.Length;
+            var m = t.Length;
+            var d = new int[n + 1, m + 1];
+            for (int i = 0; i <= n; i++) d[i, 0] = i;
+            for (int j = 0; j <= m; j++) d[0, j] = j;
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
+                {
+                    var cost = s[i - 1] == t[j - 1] ? 0 : 1;
+                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                }
+            }
+            return d[n, m];
+        }
+
 
         private static string BuildConnectionString(DbTarget target)
         {
@@ -1680,7 +1761,43 @@ WHERE mem_Modulo = @SiglaModulo";
 
             try
             {
+                // valida a pasta e assegura que os arquivos existem
                 _ = MFcn_ValidarPastaBackupRestore(txtBackupBasePath.Text.Trim());
+
+                // verificar se o nome do banco selecionado é compatível com o nome da pasta de backup
+                var backupFolder = txtBackupBasePath.Text.Trim();
+                var backupFolderBase = Path.GetFileName(backupFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+                // se houver arquivos para o alias A, confirme similaridade com targetA
+                if (selecionadas.Any(x => !string.IsNullOrWhiteSpace(x.ArquivoA)))
+                {
+                    if (!MFcn_SaoNomesBancosParecidos(targetA!.Database, backupFolderBase))
+                    {
+                        var pergunta = $"O banco selecionado '{targetA.Database}' parece diferente da pasta de backup '{backupFolderBase}'.\n\nDeseja continuar o restore para esse banco mesmo assim?";
+                        var resp = ShowMessageTopMost(this, pergunta, "Confirmar Restore", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                        if (resp != DialogResult.Yes)
+                        {
+                            Log("Restore abortado pelo usuário (nome do banco diferente da pasta de backup).");
+                            return;
+                        }
+                    }
+                }
+
+                // se houver arquivos para o alias B, confirme similaridade com targetB
+                if (selecionadas.Any(x => !string.IsNullOrWhiteSpace(x.ArquivoB)))
+                {
+                    if (!MFcn_SaoNomesBancosParecidos(targetB!.Database, backupFolderBase))
+                    {
+                        var pergunta = $"O banco selecionado '{targetB.Database}' parece diferente da pasta de backup '{backupFolderBase}'.\n\nDeseja continuar o restore para esse banco mesmo assim?";
+                        var resp = ShowMessageTopMost(this, pergunta, "Confirmar Restore", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                        if (resp != DialogResult.Yes)
+                        {
+                            Log("Restore abortado pelo usuário (nome do banco diferente da pasta de backup).");
+                            return;
+                        }
+                    }
+                }
+
                 _backupCancellation = new CancellationTokenSource();
                 SetBusy(true);
                 btnRestore.Enabled = true;
@@ -2221,7 +2338,11 @@ WHERE mem_Modulo = @SiglaModulo";
             sql.AppendLine();
             sql.Append(';');
 
-            await using var command = new MySqlCommand(sql.ToString(), connection);
+            await using var command = new MySqlCommand(sql.ToString(), connection)
+            {
+                // para operações longas de bulk insert, aumentar/zerar timeout do comando
+                CommandTimeout = 0
+            };
             await command.ExecuteNonQueryAsync(cancellationToken);
             progressoLote(rows.Count);
         }
@@ -2238,7 +2359,10 @@ WHERE mem_Modulo = @SiglaModulo";
             {
                 try
                 {
-                    await using var structCommand = new MySqlCommand(sqlAtual, connection);
+                    await using var structCommand = new MySqlCommand(sqlAtual, connection)
+                    {
+                        CommandTimeout = 0
+                    };
                     await structCommand.ExecuteNonQueryAsync(cancellationToken);
                     return;
                 }
@@ -2259,7 +2383,10 @@ WHERE mem_Modulo = @SiglaModulo";
                 }
             }
 
-            await using var finalCommand = new MySqlCommand(sqlAtual, connection);
+            await using var finalCommand = new MySqlCommand(sqlAtual, connection)
+            {
+                CommandTimeout = 0
+            };
             await finalCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -2320,7 +2447,10 @@ WHERE mem_Modulo = @SiglaModulo";
             {
                 if (dataSessionInitialized) return;
                 // Disable checks and start transaction to speed up bulk inserts
-                await using var initCmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0; SET UNIQUE_CHECKS=0; SET AUTOCOMMIT=0; START TRANSACTION;", connection);
+                await using var initCmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0; SET UNIQUE_CHECKS=0; SET AUTOCOMMIT=0; START TRANSACTION;", connection)
+                {
+                    CommandTimeout = 0
+                };
                 await initCmd.ExecuteNonQueryAsync(cancellationToken);
                 dataSessionInitialized = true;
             }
@@ -2331,8 +2461,11 @@ WHERE mem_Modulo = @SiglaModulo";
                 try
                 {
                     var finalizarTransacao = rollback ? "ROLLBACK;" : "COMMIT;";
-                    await using var commitCmd = new MySqlCommand($"{finalizarTransacao} SET AUTOCOMMIT=1; SET FOREIGN_KEY_CHECKS=1; SET UNIQUE_CHECKS=1;", connection);
-                    await commitCmd.ExecuteNonQueryAsync();
+                    await using var commitCmd = new MySqlCommand($"{finalizarTransacao} SET AUTOCOMMIT=1; SET FOREIGN_KEY_CHECKS=1; SET UNIQUE_CHECKS=1;", connection)
+                    {
+                        CommandTimeout = 0
+                    };
+                    await commitCmd.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch
                 {
@@ -2346,7 +2479,10 @@ WHERE mem_Modulo = @SiglaModulo";
                 try
                 {
                     var escaped = table.Replace("`", "``", StringComparison.Ordinal);
-                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` ENABLE KEYS;", connection);
+                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` ENABLE KEYS;", connection)
+                    {
+                        CommandTimeout = 0
+                    };
                     await cmd.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (OperationCanceledException)
@@ -2365,7 +2501,10 @@ WHERE mem_Modulo = @SiglaModulo";
                 try
                 {
                     var escaped = table.Replace("`", "``", StringComparison.Ordinal);
-                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` DISABLE KEYS;", connection);
+                    await using var cmd = new MySqlCommand($"ALTER TABLE `{escaped}` DISABLE KEYS;", connection)
+                    {
+                        CommandTimeout = 0
+                    };
                     await cmd.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (OperationCanceledException)

@@ -10,6 +10,9 @@ namespace Pegasus
         private readonly ComboBox _cboConexoes = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 380 };
         private readonly Button _btnRecarregarConexoes = new() { Text = "Recarregar", Width = 100 };
         private readonly Button _btnCopiarParaB = new() { Text = "Copiar A → B", Width = 120 };
+        private readonly CheckBox _chkManualConnection = new() { Text = "Conexão manual", AutoSize = true };
+        private readonly TextBox _txtConnectionName = new() { Width = 200, Text = "MANUAL" };
+
         private readonly TextBox _txtHostA = new() { Width = 220, Text = "192.168.1.14" };
         private readonly TextBox _txtPortA = new() { Width = 80, Text = "3306" };
         private readonly TextBox _txtDatabaseA = new() { Width = 220, Text = "gdrwa" };
@@ -33,6 +36,8 @@ namespace Pegasus
         public FormConfiguracaoInicial()
         {
             Text = "Configuração inicial - Bancos A e B";
+            // adiciona versão no caption do formulário
+            AppInfo.AppendVersao(this);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
@@ -92,6 +97,10 @@ namespace Pegasus
             _cboConexoes.Width = 560;
             panelConexao.Controls.Add(_cboConexoes);
             panelConexao.Controls.Add(_btnRecarregarConexoes);
+            // opção de conexão manual
+            panelConexao.Controls.Add(_chkManualConnection);
+            panelConexao.Controls.Add(new Label { Text = "Nome (MAIÚSC):", AutoSize = true, Padding = new Padding(8,6,0,0) });
+            panelConexao.Controls.Add(_txtConnectionName);
             root.SetColumnSpan(panelConexao, 2);
             root.Controls.Add(panelConexao, 0, 0);
 
@@ -101,6 +110,8 @@ namespace Pegasus
             _btnCopiarParaB.Click += (_, _) => MPrc_CopiarBancoAParaBancoB();
             _btnRecarregarConexoes.Click += (_, _) => CarregarConexoes();
             _cboConexoes.SelectedIndexChanged += cboConexoes_SelectedIndexChanged;
+            _chkManualConnection.CheckedChanged += _chkManualConnection_CheckedChanged;
+            _txtConnectionName.TextChanged += _txtConnectionName_TextChanged;
 
             var panelButtons = new FlowLayoutPanel
             {
@@ -135,6 +146,9 @@ namespace Pegasus
             CancelButton = btnCancel;
 
             MPrc_EstiloCampos();
+
+            // inicializa estado: modo manual desmarcado
+            _chkManualConnection.Checked = false;
 
             CarregarConexoes();
         }
@@ -190,6 +204,12 @@ namespace Pegasus
 
         private void cboConexoes_SelectedIndexChanged(object? sender, EventArgs e)
         {
+            if (_chkManualConnection.Checked)
+            {
+                // em modo manual não aplicamos a conexão selecionada automaticamente
+                return;
+            }
+
             if (_cboConexoes.SelectedItem is not ConfiguracaoConexao conexao)
             {
                 return;
@@ -310,7 +330,10 @@ namespace Pegasus
 
             ConfigBancoA = configA!;
             ConfigBancoB = configB!;
-            NomeConexaoSelecionada = (_cboConexoes.SelectedItem as ConfiguracaoConexao)?.Nome ?? "Manual";
+            // se estiver em modo manual, use o nome fornecido pelo usuário (maiúsculas)
+            NomeConexaoSelecionada = _chkManualConnection.Checked
+                ? _txtConnectionName.Text.Trim().ToUpperInvariant()
+                : (_cboConexoes.SelectedItem as ConfiguracaoConexao)?.Nome ?? "Manual";
 
             DialogResult = DialogResult.OK;
             Close();
@@ -397,7 +420,15 @@ namespace Pegasus
             {
                 campo.BorderStyle = BorderStyle.FixedSingle;
                 campo.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+                // campos de banco não editáveis por padrão (a menos que o usuário marque Conexão manual)
+                campo.ReadOnly = true;
             }
+
+            // estilo do campo de nome de conexão manual
+            _txtConnectionName.BorderStyle = BorderStyle.FixedSingle;
+            _txtConnectionName.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            _txtConnectionName.CharacterCasing = CharacterCasing.Upper;
+            _txtConnectionName.ReadOnly = true;
 
             _cboConexoes.FlatStyle = FlatStyle.Flat;
             _cboConexoes.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -411,6 +442,42 @@ namespace Pegasus
             botao.FlatAppearance.BorderSize = 0;
             botao.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             botao.Height = 34;
+        }
+
+        private void _chkManualConnection_CheckedChanged(object? sender, EventArgs e)
+        {
+            var manual = _chkManualConnection.Checked;
+            // habilita edição dos campos quando modo manual ativo
+            _txtHostA.ReadOnly = !manual;
+            _txtPortA.ReadOnly = !manual;
+            _txtDatabaseA.ReadOnly = !manual;
+            _txtUserA.ReadOnly = !manual;
+            _txtPasswordA.ReadOnly = !manual;
+
+            _txtHostB.ReadOnly = !manual;
+            _txtPortB.ReadOnly = !manual;
+            _txtDatabaseB.ReadOnly = !manual;
+            _txtUserB.ReadOnly = !manual;
+            _txtPasswordB.ReadOnly = !manual;
+
+            // nome da conexão manual está editável apenas no modo manual
+            _txtConnectionName.ReadOnly = !manual;
+            // desativa seleção automática de conexões quando manual
+            _cboConexoes.Enabled = !manual;
+            _btnRecarregarConexoes.Enabled = !manual;
+        }
+
+        private void _txtConnectionName_TextChanged(object? sender, EventArgs e)
+        {
+            // garante maiúsculas (também configurado por CharacterCasing)
+            var s = _txtConnectionName.Text ?? string.Empty;
+            var up = s.ToUpperInvariant();
+            if (s != up)
+            {
+                var pos = _txtConnectionName.SelectionStart;
+                _txtConnectionName.Text = up;
+                _txtConnectionName.SelectionStart = Math.Min(pos, up.Length);
+            }
         }
 
         private void InitializeComponent()
